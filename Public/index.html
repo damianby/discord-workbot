@@ -1,0 +1,55 @@
+<!doctype html>
+<html><head>
+    <meta charset="utf-8">
+    <title>Raspberry MultiPlayer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+
+</head>
+<body>
+    <div id="message"></div>
+    <input type="file" accept="video/*"/>
+    <video controls autoplay type="video/quicktime"></video>
+
+
+    <!-- <embed src="\\pilocistudio\Video_Photo_Storage 2\2019_PhotoVideo\2019_11 Bass Astral x Igo Krakow\Krakow - Szeroka\Capture0004.mov" width="320" height="252" 
+    autoplay="true" controller="true" loop="false" 
+    pluginspage="http://www.apple.com/quicktime/"> -->
+</body>
+
+
+
+<script>
+
+ 
+    (function localFileVideoPlayer() {
+        'use strict'
+    var URL = window.URL || window.webkitURL
+    var displayMessage = function (message, isError) {
+        var element = document.querySelector('#message')
+        element.innerHTML = message
+        element.className = isError ? 'error' : 'info'
+    }
+    var playSelectedFile = function (event) {
+        var file = this.files[0]
+        var type = file.type
+        var videoNode = document.querySelector('video')
+        var canPlay = videoNode.canPlayType(type)
+        if (canPlay === '') canPlay = 'no'
+        var message = 'Can play type "' + type + '": ' + canPlay
+        var isError = canPlay === 'no'
+        displayMessage(message, isError)
+
+        if (isError) {
+        return
+        }
+
+        var fileURL = URL.createObjectURL(file)
+        videoNode.src = fileURL
+    }
+    var inputNode = document.querySelector('input')
+    inputNode.addEventListener('change', playSelectedFile, false)
+    })()
+</script>
+
+</html>
