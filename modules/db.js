@@ -13,7 +13,8 @@ const client = new MongoClient(uri, {
 
 let database;
 let usersColl;
-
+let guildsColl;
+let hoursColl;
 
 async function connect() {
     try {
@@ -21,10 +22,14 @@ async function connect() {
         await client.connect();
         console.log("COnnected");
         // Establish and verify connection
-        database = client.db("workbot");
+        
         await client.db("workbot").command({ ping: 1 });
+
+        database = client.db("workbot");
         console.log("Connected successfully to server");
         usersColl =  await database.collection("users");
+        guildsColl = await database.collection("guilds");
+        hoursColl = await database.collection("hours");
     } catch (err) {
         throw new Error(err);
     }
@@ -34,8 +39,14 @@ function get(){
     return database;
 }
 
-function coll(){
+function users(){
     return usersColl;
+}
+function guilds(){
+    return guildsColl;
+}
+function hours(){
+    return hoursColl;
 }
 
 async function close(){
@@ -61,5 +72,7 @@ module.exports = {
     connect,
     get,
     close,
-    coll
+    users,
+    guilds,
+    hours
 };

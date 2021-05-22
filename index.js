@@ -56,10 +56,4 @@ db.connect("workbot").then( () => {
     console.log(e);
 });
 
- 
-const moment = require('moment');
-const https = require('https');
- 
-
-
 
