@@ -1,0 +1,32 @@
+
+
+<script src="/js/moment-with-locales.min.js"></script>
+
+<script>
+
+    // moment.locale("pl");
+
+    // console.log(moment.locale);
+    var reports =<%-JSON.stringify(reports)%>;
+
+
+
+    // let lastId = reports.length - 1;
+    // console.log(moment(reports[lastId].dateStart).format('llll'));
+    // console.log(moment(reports[lastId].dateEnd).format('llll'));
+
+</script>
+<% reports.forEach(function(report){ %>
+    <div>Miesiąc <%= report.month %></div>
+   <% let splitted = helpers.splitByDay(report); 
+        splitted.forEach(function(day){ %>
+            <li>Dzień <%= day.dayStart %></li>
+            <% day.schedules.forEach(function(schedule){   %>
+
+
+   
+        
+            <li style="padding-left:15px" data-value="1"><%= helpers.formatTime(schedule, report) %></li>
+        <%}) %>
+    <%}) %>
+<%}) %>
