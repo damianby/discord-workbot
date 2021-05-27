@@ -521,16 +521,19 @@ async function updateHoursTable(guild) {
     
             hoursMsg += "-" + (i + 1) + '. ' + users[i].name + " - " + dateStart + " - " + dateEnd + " Ostatnio: " + lastSeen + "\n";
         }
-
-       
     }
 
     hoursMsg += "\n```";
 
+    const embed = new Discord.MessageEmbed()
+        .setColor('#0099ff')
+        .setTitle("Timetable")
+        .setDescription(hoursMsg)
+
     if(guildContainer.hoursTableMsg) {
-        await guildContainer.hoursTableMsg.edit(hoursMsg);
+        await guildContainer.hoursTableMsg.edit(embed);
     } else {
-        await guildContainer.workChannel.send(hoursMsg)
+        await guildContainer.workChannel.send(embed)
         .then( message => {
             if(!guildContainer.hoursTableMsg) {
                 guildContainer.hoursTableMsg = message;
