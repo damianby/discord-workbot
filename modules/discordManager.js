@@ -679,7 +679,15 @@ async function outMessage(parsed, message) {
 }
 async function removeGroupMessage(parsed, message) {
 
-    let isnum = /^\d+$/.test(parsed.arguments[0]);
+    let user = getUserFromMention(parsed.arguments[0]);
+
+    //check if this works
+    if(!user) {
+        console.log(user);
+        return;
+    }
+
+    let isnum = /^\d+$/.test(user.id);
     if(!isnum) {
         message.author.send("Id nie jest liczbą!");
         return;
@@ -705,14 +713,49 @@ async function removeGroupMessage(parsed, message) {
     
     updatedUser = updatedUser.value;
     if(updatedUser) {
-        message.author.send("Usunięto grupe " + removeGroup + " użytkownikowi " + updatedUser.name);
+
+        //#1DB954
+        const embed = new Discord.MessageEmbed()
+            .setColor('#1DB954')
+            .setTitle("Grupy")
+            .setDescription("Usunięto grupę " + removeGroup + " użytkownikowi " + updatedUser.name);
+
+        message.channel.send(embed);
+        //message.author.send("Usunięto grupe " + removeGroup + " użytkownikowi " + updatedUser.name);
     }
 
 }
 
+function getUserFromMention(mention) {
+
+    
+	if (!mention) return;
+
+	if (mention.startsWith('<@') && mention.endsWith('>')) {
+		mention = mention.slice(2, -1);
+
+		if (mention.startsWith('!')) {
+			mention = mention.slice(1);
+		}
+
+		return mention;
+	}
+}
+
 async function setGroupMessage(parsed, message) {
 
-    let isnum = /^\d+$/.test(parsed.arguments[0]);
+    let user = getUserFromMention(parsed.arguments[0]).trim();
+    
+
+    console.log("User: " + user);
+    //check if this works
+    if(!user) {
+        return;
+    }
+
+    
+    let isnum = /^\d+$/.test(user);
+    //let isnum = /^\d+$/.test(parsed.arguments[0]);
     if(!isnum) {
         message.author.send("Id nie jest liczbą!");
         return;
@@ -741,8 +784,24 @@ async function setGroupMessage(parsed, message) {
         });
 
     updatedUser = updatedUser.value;
+    //#1DB954
+    const embed = new Discord.MessageEmbed()
+    
+    .setTitle("Grupy")
+
+
+    
+
     if(updatedUser) {
-        message.author.send("Dodano grupę " + newGroup + " użytkownikowi " + updatedUser.name);
+        embed.setDescription("Dodano grupę " + removeGroup + " użytkownikowi " + updatedUser.name);
+        embed.setColor('#1DB954');
+
+        message.channel.send(embed);
+    } else {
+        embed.setDescription("Podany użytkownik należy już do tej grupy");
+        embed.setColor('#FF0000');
+
+        message.author.send(embed);
     }
 
 
