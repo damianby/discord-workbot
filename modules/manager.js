@@ -3,7 +3,7 @@ const log = require("./log")('manager');
 
 const { v4: uuidv4 } = require('uuid');
 
-const IP = "192.168.1.7";
+const IP = "192.168.1.114";
 const PORT = 43000;
 
 let reports = {};
@@ -24,7 +24,7 @@ exports.getOneTimeReport = function(id) {
 
     if(reports[id]) {
         let report = reports[id];
-        //delete reports[id];
+        delete reports[id];
         return report;
     } else {
         return null;
