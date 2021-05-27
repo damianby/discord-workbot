@@ -330,17 +330,31 @@ async function refresh() {
             continue;
         }
 
-        let clearChannel = async function() {
-            let deleted = await newGuild.workChannel.bulkDelete(100)
-                .catch( error => {
-                    log.error("Error clearing channel " + error);
-                });
-            
-            return deleted.size;
-        }
 
-        let messagesDeleted = 0;
-        messagesDeleted = await clearChannel();
+        async function wipe() {
+            var msg_size = 100;
+            while (msg_size == 100) {
+                await newGuild.workChannel.bulkDelete(100)
+                    .then(messages => msg_size = messages.size)
+                    .catch(console.error);
+            }
+        }
+        await wipe();
+
+
+        // let clearChannel = async function() {
+        //     let deleted = await newGuild.workChannel.bulkDelete(100)
+        //         .catch( error => {
+        //             log.error("Error clearing channel " + error);
+        //         });
+            
+        //     return deleted.size;
+        // }
+
+        // let messagesDeleted = 0;
+        // messagesDeleted = await clearChannel();
+
+        
 
         newGuild.users = [];
         for (const [snowflake, member] of newGuild.workChannel.members) {
