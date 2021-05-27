@@ -767,7 +767,7 @@ client.on('message', message => {
 
 
     //Always clear messages on workChannel, it needs to be kept clean
-    if(message.guild && bIsReady) {
+    if(message.guild && bIsReady && guildsContainer[message.guild.id]) {
         if(message.channel.id == guildsContainer[message.guild.id].workChannel.id) {
             message.delete({timeout: 100})
                 .catch( e => {
