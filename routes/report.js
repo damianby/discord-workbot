@@ -12,7 +12,7 @@ module.exports = function(req, res) {
         if(reports) {
             res.render("report.html", {helpers: ejs_helpers, reports: reports});
         } else {
-            res.render("index.html");
+            res.render("missingreport.html");
         }
     } else {
         res.render("index.html");

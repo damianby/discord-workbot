@@ -10,9 +10,12 @@ const app = express();
 const http = require('http');
 var server = http.Server(app);
 
+var path = require('path');
+
 const routes = require('./routes/routes');
 const manager = require('./modules/manager');
  
+const sass = require('node-sass-middleware');
 
 const discordManager = require('./modules/discordManager');
 
@@ -25,13 +28,24 @@ app.use(express.json({
     verify: undefined
 }));
 
-app.set('views', __basedir + '\\Public');
+
+
+app.use(
+    sass({
+        src: path.join(__dirname, 'sass'), //where the sass files are 
+        dest: path.join(__dirname, 'public', 'css'), //where css should go
+        debug: true, // obvious,
+        prefix: '/css'
+    })
+);
+
+app.set('views', path.join(__basedir, 'Public'));
 app.set('view engine', 'ejs');
 app.engine('html', require('ejs').renderFile);
 
  
 app.use('/', routes);
-app.use(express.static(__basedir + '/Public'));
+app.use(express.static(path.join(__basedir, 'Public')));
 
 
 manager.initialize();

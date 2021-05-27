@@ -17,6 +17,7 @@
 
 </script>
 <% reports.forEach(function(report){ %>
+    <div>Serwer: <%= report.guild.name %></div>
     <div>Miesiąc <%= report.month %></div>
    <% let splitted = helpers.splitByDay(report); 
         splitted.forEach(function(day){ %>
@@ -29,4 +30,6 @@
             <li style="padding-left:15px" data-value="1"><%= helpers.formatTime(schedule, report) %></li>
         <%}) %>
     <%}) %>
+    <hr>
+    <hr>
 <%}) %>
