@@ -3,76 +3,76 @@ const log = require("./log")('user');
 
 
 
-class User{
+class User {
 
-    constructor(id, name) {
-        this.id = id;
-        this.name = name;
+	constructor(id, name) {
+		this.id = id;
+		this.name = name;
 
-        this.isActive = false;
+		this.isActive = false;
 
-    }
+	}
 
 
-    sendCommand(command) {
-        return new Promise(function(resolve, reject) {
-            connectionmanager.sendCommand(this.ip, command)
-                .then((result) => {
-                    resolve(result);
-                })
-                .catch((error) => {
-                    reject(error);
-                });
-        });
-        
-    }
+	sendCommand(command) {
+		return new Promise(function(resolve, reject) {
+			connectionmanager.sendCommand(this.ip, command)
+				.then((result) => {
+					resolve(result);
+				})
+				.catch((error) => {
+					reject(error);
+				});
+		});
+		
+	}
 
-    updateFileList() {
-        
-    }
-    
-    serialize() {
+	updateFileList() {
+		
+	}
+	
+	serialize() {
 
-    }
+	}
 
-    // getTaskNextJob() {
-    //     return parser.parseExpression(this.schedule).next().toString();
-    // }
+	// getTaskNextJob() {
+	//	 return parser.parseExpression(this.schedule).next().toString();
+	// }
 
-    // stop() {
-    //     this.task.stop();
-    // }
+	// stop() {
+	//	 this.task.stop();
+	// }
 
-    // destroy() {
+	// destroy() {
 
-    //     //this.task.destroy();
-        
-    // }
+	//	 //this.task.destroy();
+		
+	// }
 
-    // changeSchedule(newSchedule) {
+	// changeSchedule(newSchedule) {
 
-    //     if(cron.validate(newSchedule)) {
-    //         this.stop();
-    //         this.schedule = newSchedule;
+	//	 if(cron.validate(newSchedule)) {
+	//		 this.stop();
+	//		 this.schedule = newSchedule;
 
-    //         this.task = cron.schedule(this.schedule, this.exec);
-    //     } else {
-    //         log.error("Wrong schedule passed to change schedule!");
-    //     } 
-    // }
+	//		 this.task = cron.schedule(this.schedule, this.exec);
+	//	 } else {
+	//		 log.error("Wrong schedule passed to change schedule!");
+	//	 } 
+	// }
 
-    // changeExec(newExec) {
-    //     if(newExec) {
-    //         this.stop();
-    //         this.exec = newExec;
+	// changeExec(newExec) {
+	//	 if(newExec) {
+	//		 this.stop();
+	//		 this.exec = newExec;
 
-    //         this.task = cron.schedule(this.schedule, this.exec);
-    //     }
-    // }
+	//		 this.task = cron.schedule(this.schedule, this.exec);
+	//	 }
+	// }
 
-    // getSimpleTime() {
-    //     let splittedSchedule = this.schedule.split(" ");
-    //     return splittedSchedule[2] + ":" + splittedSchedule[1];
-    // }
+	// getSimpleTime() {
+	//	 let splittedSchedule = this.schedule.split(" ");
+	//	 return splittedSchedule[2] + ":" + splittedSchedule[1];
+	// }
 
 }

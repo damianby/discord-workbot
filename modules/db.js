@@ -15,64 +15,70 @@ let database;
 let usersColl;
 let guildsColl;
 let hoursColl;
+let perforceColl;
 
 async function connect() {
-    try {
-        // Connect the client to the server
-        await client.connect();
-        console.log("COnnected");
-        // Establish and verify connection
-        
-        await client.db("workbot").command({ ping: 1 });
+	try {
+		// Connect the client to the server
+		await client.connect();
+		console.log("COnnected");
+		// Establish and verify connection
+		
+		await client.db("workbot").command({ ping: 1 });
 
-        database = client.db("workbot");
-        console.log("Connected successfully to server");
-        usersColl =  await database.collection("users");
-        guildsColl = await database.collection("guilds");
-        hoursColl = await database.collection("hours");
-    } catch (err) {
-        throw new Error(err);
-    }
+		database = client.db("workbot");
+		console.log("Connected successfully to server");
+		usersColl =  await database.collection("users");
+		guildsColl = await database.collection("guilds");
+		hoursColl = await database.collection("hours");
+		perforceColl = await database.collection("perforce");
+	} catch (err) {
+		throw new Error(err);
+	}
 }
 
 function get(){
-    return database;
+	return database;
 }
 
 function users(){
-    return usersColl;
+	return usersColl;
 }
 function guilds(){
-    return guildsColl;
+	return guildsColl;
 }
 function hours(){
-    return hoursColl;
+	return hoursColl;
+}
+
+function perforce() {
+	return perforceColl;
 }
 
 async function close(){
-    database.close();
+	database.close();
 }
 
 // function updateMeta(param){
 
-//     mongodb.collection("_metadata").updateOne({name: collectionName}, param, {upsert: true}, function(err, res){
-//         if(err){
-//             log.error(err);
-//             //throw err;
-//         } 
-//        log.debug("Succesfully updated metadata of " + collectionName);
-//     });
+//	 mongodb.collection("_metadata").updateOne({name: collectionName}, param, {upsert: true}, function(err, res){
+//		 if(err){
+//			 log.error(err);
+//			 //throw err;
+//		 } 
+//		log.debug("Succesfully updated metadata of " + collectionName);
+//	 });
 // }
 
 // function getMeta(){
-//     return mongodb.collection("_metadata");
+//	 return mongodb.collection("_metadata");
 // }
 
 module.exports = {
-    connect,
-    get,
-    close,
-    users,
-    guilds,
-    hours
+	connect,
+	get,
+	close,
+	users,
+	guilds,
+	hours
 };

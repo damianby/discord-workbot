@@ -22,21 +22,21 @@ exports.createUser = function() {
 
 exports.getOneTimeReport = function(id) {
 
-    if(reports[id]) {
-        let report = reports[id];
-        delete reports[id];
-        return report;
-    } else {
-        return null;
-    }
+	if(reports[id]) {
+		let report = reports[id];
+		delete reports[id];
+		return report;
+	} else {
+		return null;
+	}
 }
 
 exports.generateOneTimeReport = function(reportData) {
-    let uuid = uuidv4().split("-").join("");
+	let uuid = uuidv4().split("-").join("");
 
-    console.log(uuid);
+	console.log(uuid);
 
-    reports[uuid] = reportData;
+	reports[uuid] = reportData;
 
-    return "http://" + IP + ":" + PORT.toString() + "/report/" + uuid;
+	return "http://" + IP + ":" + PORT.toString() + "/report/" + uuid;
 }

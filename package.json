@@ -11,8 +11,9 @@
   "dependencies": {
     "bufferutil": "^4.0.3",
     "discord-command-parser": "^1.5.3",
-    "discord.js": "github:discordjs/discord.js",
+    "discord.js": "github:monbrey/discord.js#message-components",
     "ejs": "^3.1.6",
+    "eslint": "^7.27.0",
     "express": "^4.17.1",
     "moment": "^2.29.1",
     "moment-timezone": "^0.5.33",
