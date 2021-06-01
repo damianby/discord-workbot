@@ -451,8 +451,9 @@ async function mialekMessage(parsed, message) {
 }
 
 
-async function updateHoursTable(guild) {
+async function updateHoursTable(guild, interaction) {
 
+	console.log('updaring workhours table');
 	const schedule = 'lastSchedules.' + guild.id;
 
 	let users = [];
@@ -474,7 +475,7 @@ async function updateHoursTable(guild) {
 			} 
 		}
 	]).forEach( user => {
-		//console.log(user);
+		console.log(user);
 
 		let lastSchedule = user.lastSchedules[guild.id];
 		if(lastSchedule.dateEnd == null) {
@@ -525,42 +526,228 @@ async function updateHoursTable(guild) {
 	const guildContainer = guildsContainer[guild.id];
 	let hoursMsg = '```diff\n';
 
-
+	for(let i = 0 ; i < 20 ; i++ ) {
+		users.push(users[0]);
+	}
+	
 	for(let i = 0 ; i < users.length ; i++) {
 
+		let prefix = '';
+		if(i < 9) {
+			prefix = ' ';
+		}
+		
 		if(users[i].isActive) {
 			const dateStart = moment(users[i].dateStart).format('HH:mm');
-			hoursMsg += '+' + (i + 1) + '. ' + users[i].name + ' - ' + dateStart + ' - ' + 'xx:xx' + '\n';
+			hoursMsg += '+' + (i + 1) + '. ' + prefix + users[i].name + ' - ' + dateStart + ' - ' + 'xx:xx' + '\n';
 		} else {
 			const dateStart = moment(users[i].dateStart).format('HH:mm');
 			const dateEnd = moment(users[i].dateEnd).format('HH:mm');
 	
 			const lastSeen = moment(users[i].dateEnd).format('L');
 	
-			hoursMsg += '-' + (i + 1) + '. ' + users[i].name + ' - ' + dateStart + ' - ' + dateEnd + ' Ostatnio: ' + lastSeen + '\n';
+			hoursMsg += '-' + (i + 1) + '. ' + prefix + users[i].name + ' - ' + dateStart + ' - ' + dateEnd + ' Ostatnio: ' + lastSeen + '\n';
 		}
 	}
 
 	hoursMsg += '\n```';
 
+	console.log(hoursMsg);
+
+	
+	const buttons = new Discord.MessageActionRow()
+		.addComponents([
+		new Discord.MessageButton()
+			.setCustomID('workhours_login_button')
+			.setLabel('Login')
+			.setStyle('SUCCESS'),
+		new Discord.MessageButton()
+			.setCustomID('workhours_logout_button')
+			.setLabel('Logout')
+			.setStyle('DANGER')
+		
+		]);
+
+
+
+		//await interaction.reply('Pong!', { ephemeral: true, embeds: [embed], components: [row] });
+
+
+
 	const embed = new Discord.MessageEmbed()
 		.setColor('#0099ff')
 		.setTitle('Timetable')
-		.setDescription(hoursMsg)
+		.setDescription(hoursMsg);
+
+
 
 	if(guildContainer.hoursTableMsg) {
-		await guildContainer.hoursTableMsg.edit(embed);
+
+		await interaction.update('_', { embeds: [embed], components: [buttons]});
+		// let result = await guildContainer.hoursTableMsg.edit('_', { embeds: [embed], components: [buttons]})
+		// 	.catch((error) => {
+		// 		log.error("Error updating workhours channel " + error);
+		// 	});
+		// console.log(result);
 	} else {
-		await guildContainer.workChannel.send(embed)
+
+		await guildContainer.workChannel.send('_', { embed: embed, components: [buttons]})
 		.then( message => {
 			if(!guildContainer.hoursTableMsg) {
 				guildContainer.hoursTableMsg = message;
+				createCollectorForWorkhours(message, guildContainer);
+				
+				log.error("MESSAGE ID CREATE:" + message.id);
 			}
 		}).catch( e => {
 			log.error(e);
 		});
 	}
 }
+
+function createCollectorForWorkhours(message, guildContainer) {
+	console.log("Creating collector!");
+	const filter = interaction => interaction.customID === 'workhours_login_button' || interaction.customID === 'workhours_logout_button';
+	guildContainer.hoursTableCollector = message.createMessageComponentInteractionCollector(filter, { time: 2147483000 });
+
+	guildContainer.hoursTableCollector.on('collect', (interaction) => {
+		
+		if(interaction.customID === 'workhours_login_button') {
+			workhoursIn(interaction);
+		} else {
+			workhoursOut(interaction);
+		}
+
+		//interaction.reply("Zalogowano!", { ephemeral: true });
+		
+		console.log(`Collected ${interaction.customID}`)
+	});
+	guildContainer.hoursTableCollector.on('end', collected => console.log(`Collected ${collected.size} items`));
+}
+
+////////////////////////
+async function workhoursIn(interaction) {
+
+	console.log('workhours in!');
+	interaction.deferUpdate();
+
+	let guildId = interaction.guild.id;
+
+	//globalMsg.edit('user changed to ' + message.client.user.username);
+	//message.author.id
+	const authorId = interaction.user.id;
+
+
+	const newSchedule = 'lastSchedules.' + guildId;
+	const newScheduleEnd = newSchedule + '.dateEnd';
+	const query = {
+		
+		id: authorId,
+		$or : [
+			{ [newSchedule] : { $exists: false} },
+			{ [newScheduleEnd] : { $ne: null} } 
+		]
+	};
+	const updateDoc = {
+		$set : {
+			[newSchedule]: {
+				dateStart: new Date(),
+				dateEnd: null
+			}
+		}
+	};
+
+	const setActiveScheduleQuery = await db.users().findOneAndUpdate(query, updateDoc);
+	let userFound = setActiveScheduleQuery.lastErrorObject.n;
+
+	if(userFound) {
+		updateHoursTable(interaction.guild, interaction);
+	}else {
+		interaction.reply('Jesteś już zalogowany!', { ephemeral: true });
+	}
+}
+
+async function workhoursOut(interaction) {
+
+	interaction.deferUpdate();
+	let guildId = interaction.guild.id;
+
+	const authorId = interaction.user.id;
+
+	const lastSchedule = 'lastSchedules.' + guildId;
+	const lastScheduleEnd = lastSchedule + '.dateEnd';
+	const query = {
+		
+		id: authorId,
+		[lastScheduleEnd] : { $exists: true, $eq: null}
+	};
+
+	let endDate = new Date();
+	const updateDoc = {
+		$set : {
+			[lastScheduleEnd]: endDate
+		}
+	};
+
+	//const user = await db.users().findOne(query);
+	const outQuery = await db.users().findOneAndUpdate(query, updateDoc);
+	let userFound = outQuery.lastErrorObject.n;
+	let user = outQuery.value;
+
+	if(userFound) {
+
+		updateHoursTable(interaction.guild, interaction);
+
+		//save hours in database
+
+		//const dateNow = moment(new Date()).format('YYYY-MM-DD[T00:00:00.000Z]');
+
+		let start = moment(user.lastSchedules[guildId].dateStart);
+		const startOfMonth = start.utc().startOf('month');
+		const endOfMonth   = startOfMonth.clone().utc().endOf('month');
+
+		const startMonthDate = startOfMonth.toDate();
+		const endMonthDate = endOfMonth.toDate();
+
+		const query = {
+			userId: authorId,
+			guildId: guildId,
+			firstDay: {
+				$eq: startMonthDate
+			},
+			lastDay: {
+				$eq: endMonthDate
+			}
+		};
+
+		const update = {
+			$setOnInsert: {
+				userId: authorId,
+				guildId: guildId,
+				firstDay: startMonthDate,
+				lastDay: endMonthDate,
+			},
+			$push: {
+				'schedules': {
+					dateStart: user.lastSchedules[guildId].dateStart,
+					dateEnd: endDate
+				}
+			}
+		};
+
+		const updated = await db.hours().updateOne(query, update, {upsert: true});
+	 
+		if(updated.matchedCount == 1) {
+			log.info('User ' + user.name + ' quit. Hours saved!');
+		}
+	} else {
+		interaction.reply('Nie jesteś obecnie zalogowany/a do pracy. Najpierw użyj "/in" !', { ephemeral : true })
+	}
+
+}
+/////////////////////////////
+
+
 
 async function inMessage(parsed, message) {
 
@@ -610,7 +797,6 @@ async function inMessage(parsed, message) {
 	}else {
 		message.author.send('Jesteś już zalogowany!');
 	}
-
 }
 
 async function outMessage(parsed, message) {
