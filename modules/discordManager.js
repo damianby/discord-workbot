@@ -100,6 +100,13 @@ class CommandsManager {
 				params: [{name: 'path', required: true}],
 				privileges: [GROUP.ADMIN]
 			},
+			all: {
+				name: 'all',
+				func: allMessage,
+				desc: 'Wysłanie prywatnej wiadomości do wszystkich członków serwera',
+				params: [ {name: 'message', require: true}],
+				privileges: [GROUP.ADMIN],
+			}
 		}
 
 		for (const cmd in this.Commands) {
@@ -229,10 +236,88 @@ client.on('ready', async () => {
 
 	await refresh();
 
-	client.user.setActivity('Harry Potter', { type: 'WATCHING'});
+	client.user.setActivity('DOIN THE JOB!', { type: 'WATCHING'});
+
 	setInterval(workhoursAutoLogout, 1000 * 60); // once a minute
+
 });
 
+async function allMessage(parsed, message) {
+	
+	if(!message.guild?.id) {
+		message.reply('Wyślij wiadomość na kanale gildi!');
+		return;
+	}
+
+	const query = {
+		//id: message.author.id,
+		guilds : message.guild.id 
+	};
+	let users = await db.users().find(query).toArray();
+
+
+	let content = 'Zatwierdź wiadomość do wszystkich!\n\n';
+
+	let sendMessage = '> **Ogłoszenie od <@' + message.author.id + '>**\n\n';
+	const embed = new Discord.MessageEmbed()
+		.setColor('#00ff00')
+		.setDescription(parsed.body);
+
+
+
+	
+	const buttons = new Discord.MessageActionRow()
+		.addComponents([
+		new Discord.MessageButton()
+			.setCustomID('all_message_approve_button')
+			.setLabel('Approve')
+			.setStyle('SUCCESS'),
+		new Discord.MessageButton()
+			.setCustomID('all_message_dismiss_button')
+			.setLabel('Dismiss')
+			.setStyle('DANGER')
+		
+		]);
+
+	content += '----------\n' + sendMessage;
+
+	let approveMessage = await message.reply(content, { embed: embed, components: [buttons]})
+
+
+	const filter = interaction => interaction.customID === 'all_message_approve_button' || interaction.customID === 'all_message_dismiss_button';
+	const collector = approveMessage.createMessageComponentInteractionCollector(filter, { time: 20000 });
+
+	collector.on('collect', (interaction) => {
+
+		if(interaction.customID === 'all_message_approve_button') {
+
+			interaction.deferUpdate();
+			approveMessage.edit('**Wiadomość została wysłana!**', {components: [], embed: null});
+			users.forEach( user => {
+		
+				// need to fetch before?
+				let userInCache = client.users.cache.get(user.id);
+				if(userInCache) {
+					userInCache.send(sendMessage, { embed: embed });
+				}
+			});
+
+		} else {
+			interaction.deferUpdate();
+			approveMessage.edit('**Anulowano wysyłanie wiadomości!**', {components: [], embed: null});
+		}
+
+		collector.stop();
+	});
+
+	collector.on('end', collected => {
+		if(collected.size == 0) {
+			approveMessage.edit('**Anulowano wysyłanie wiadomości!**', {components: [], embed: null} );
+		}	
+	});
+
+	
+}
 
 async function trackMessage(parsed, message) {
 	if(message.channel.type == 'text') {
