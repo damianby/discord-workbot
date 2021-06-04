@@ -17,16 +17,13 @@
 
 </script>
 <% reports.forEach(function(report){ %>
+	<% let reparsed = helpers.reparseDaysAndDurations(report); %>
     <div>Serwer: <%= report.guild.name %></div>
-    <div>Miesiąc <%= report.month %></div>
-   <% let splitted = helpers.splitByDay(report); 
-        splitted.forEach(function(day){ %>
-            <li>Dzień <%= day.dayStart %></li>
+    <div>Miesiąc <%= report.month %> - <%= helpers.formatToMonthHours(reparsed.totalMonthDuration) %></div>
+       	<% reparsed.schedules.forEach(function(day){ %>
+            <li>Dzień <%= day.dayStart %> - <%= helpers.secondsToTime(day.totalDuration) %></li>
             <% day.schedules.forEach(function(schedule){   %>
 
-
-   
-        
             <li style="padding-left:15px" data-value="1"><%= helpers.formatTime(schedule, report) %></li>
         <%}) %>
     <%}) %>
