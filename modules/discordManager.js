@@ -230,6 +230,7 @@ client.on('ready', async () => {
 	await refresh();
 
 	client.user.setActivity('Harry Potter', { type: 'WATCHING'});
+	setInterval(workhoursAutoLogout, 1000 * 60); // once a minute
 });
 
 
@@ -314,6 +315,26 @@ async function refreshMessage(parsed, message) {
 	await refresh();
 }
 
+
+async function createUser(member) {
+	const updateDoc = {
+		$set: {
+		  id: member.user.id,
+		  name: member.user.username,
+		},
+		$addToSet: { 
+			guilds: member.guild.id
+		},
+		$setOnInsert: {
+			groups: ['employee'],
+			privilegeLevel: 0,
+			lastSchedules: {}
+		}
+	};
+
+	await db.users().updateOne({id: member.user.id}, updateDoc, {upsert: true});
+}
+
 async function refresh() {
 	bIsReady = false;
 	let guilds = client.guilds.cache;
@@ -326,13 +347,28 @@ async function refresh() {
 			continue;
 		}
 
-		let newGuild = {};
+		let newGuild = {
+			name: guild.name
+		};
 	
 		let channels = guild.channels.cache;
 		
 		channels.forEach(channel => {
 			if(channel.name == WORK_CHANNEL_NAME) {
 				newGuild.workChannel = channel;
+
+
+				const flags = [
+					'VIEW_CHANNEL',
+					'EMBED_LINKS',
+					'READ_MESSAGE_HISTORY',
+				];
+				
+				const permissions = new Discord.Permissions(flags);
+
+				//console.log(permissions.serialize());
+				channel.updateOverwrite(channel.guild.roles.everyone, permissions.serialize());
+				//console.log(channel.guild.roles.everyone);
 				
 				log.info('Work channel ' + WORK_CHANNEL_NAME + ' found on server ' + guild.name);
 			}
@@ -377,23 +413,7 @@ async function refresh() {
 			if(member.user.id == client.user.id) {
 				continue;
 			}
-			const updateDoc = {
-				$set: {
-				  id: snowflake,
-				  name: member.user.username,
-				},
-				$addToSet: { 
-					guilds: guild.id
-				},
-				$setOnInsert: {
-					groups: ['employee'],
-					privilegeLevel: 0,
-					lastSchedules: {}
-				}
-			};
-	
-			newGuild.users.push({name: member.user.username});
-			db.users().updateOne({id: snowflake}, updateDoc, {upsert: true});
+			await createUser(member);
 		}
 
 		log.info('Loaded all users');
@@ -412,7 +432,7 @@ async function refresh() {
 
 		guildsContainer[guild.id] = newGuild;
 
-		await updateHoursTable(guild);
+		await updateHoursTable(guild.id);
 	};
 
 	log.info('Is ready FINALLY!!!!!');
@@ -446,15 +466,32 @@ async function mialekMessage(parsed, message) {
 		}
 		client.users.cache.get(user.id).send(sendMessage);
 	});
-	
-	
 }
 
+client.on('interaction', async interaction => {
+	//if (!interaction.isMessageComponent() && interaction.componentType !== 'BUTTON') return;
+	// if (interaction.customID === 'primary') {
+	// 	await interaction.update('A button was clicked!', { components: [] });
+	// }
 
-async function updateHoursTable(guild, interaction) {
+	//console.log(interaction);
+});
 
-	console.log('updaring workhours table');
-	const schedule = 'lastSchedules.' + guild.id;
+async function updateHoursTable(guildId, lastUserEvent) {
+
+	if(!guildId) {
+		log.error("Undefined guild passed to updateHoursTable");
+		return;
+	}
+
+	const guildContainer = guildsContainer[guildId];
+	if(!guildContainer) {
+		log.error("Wrong guild id passed to updateHoursTable");
+		return;
+	}
+
+	log.verbose("Updating workhours table for guild " + guildContainer.name);
+	const schedule = 'lastSchedules.' + guildId;
 
 	let users = [];
 
@@ -463,7 +500,7 @@ async function updateHoursTable(guild, interaction) {
 	await db.users().aggregate([
 		{ 
 			$match: { 
-				guilds: guild.id,
+				guilds: guildId,
 				[schedule] : { 
 					$exists: true,
 				}   
@@ -475,9 +512,7 @@ async function updateHoursTable(guild, interaction) {
 			} 
 		}
 	]).forEach( user => {
-		console.log(user);
-
-		let lastSchedule = user.lastSchedules[guild.id];
+		let lastSchedule = user.lastSchedules[guildId];
 		if(lastSchedule.dateEnd == null) {
 			activeUsers.push({
 				name: user.name,
@@ -485,7 +520,7 @@ async function updateHoursTable(guild, interaction) {
 				dateEnd: null,
 				isActive: true
 			});
-			// console.log(new Date(user.lastSchedules[guild.id].dateStart).toString());
+			// console.log(new Date(user.lastSchedules[guildId].dateStart).toString());
 			// console.log('users foreach');
 		} else {
 			inactiveUsers.push({
@@ -523,13 +558,8 @@ async function updateHoursTable(guild, interaction) {
 
 	fixUsernames(users);
 
-	const guildContainer = guildsContainer[guild.id];
 	let hoursMsg = '```diff\n';
 
-	for(let i = 0 ; i < 20 ; i++ ) {
-		users.push(users[0]);
-	}
-	
 	for(let i = 0 ; i < users.length ; i++) {
 
 		let prefix = '';
@@ -552,9 +582,6 @@ async function updateHoursTable(guild, interaction) {
 
 	hoursMsg += '\n```';
 
-	console.log(hoursMsg);
-
-	
 	const buttons = new Discord.MessageActionRow()
 		.addComponents([
 		new Discord.MessageButton()
@@ -568,67 +595,146 @@ async function updateHoursTable(guild, interaction) {
 		
 		]);
 
+	let content = '**-- Przedszkolna lista obecności --**';
 
-
-		//await interaction.reply('Pong!', { ephemeral: true, embeds: [embed], components: [row] });
-
-
+	// if(lastUserEvent) {
+	// 	if(lastUserEvent.event == 'login') {
+	// 		content = 'Użytkownik <@' + lastUserEvent.id + '> rozpoczął pracę';
+	// 	} else {
+	// 		content = 'Użytkownik <@' + lastUserEvent.id + '> zakończył pracę';
+	// 	}
+	// }
 
 	const embed = new Discord.MessageEmbed()
 		.setColor('#0099ff')
-		.setTitle('Timetable')
+		//.setTitle('Timetable')
 		.setDescription(hoursMsg);
 
 
-
-	if(guildContainer.hoursTableMsg) {
-
-		await interaction.update('_', { embeds: [embed], components: [buttons]});
-		// let result = await guildContainer.hoursTableMsg.edit('_', { embeds: [embed], components: [buttons]})
-		// 	.catch((error) => {
-		// 		log.error("Error updating workhours channel " + error);
-		// 	});
-		// console.log(result);
-	} else {
-
-		await guildContainer.workChannel.send('_', { embed: embed, components: [buttons]})
-		.then( message => {
-			if(!guildContainer.hoursTableMsg) {
-				guildContainer.hoursTableMsg = message;
-				createCollectorForWorkhours(message, guildContainer);
-				
-				log.error("MESSAGE ID CREATE:" + message.id);
+	async function createMessage(container) {
+		container.workhoursTable = {
+			temporaryMessages: {
+				sendTimer: null,
+				deleteTimer: null,
+				sent: [],
+				waiting: []
 			}
-		}).catch( e => {
+		};
+		container.workhoursTable.message = await container.workChannel.send(content, { embed: embed, components: [buttons]})
+		.catch( e => {
 			log.error(e);
 		});
+	
+		container.workhoursTable.collector = createCollectorForWorkhours(container);
+	}
+	
+	if(!guildContainer.workhoursTable) {
+		await createMessage(guildContainer);
+	} else {
+		await guildContainer.workhoursTable.message.edit(content, { embed: embed, components: [buttons]})
+		.catch( (error) => {
+			if(error.code == 10008) { // No message found
+				createMessage(guildContainer);
+			}
+		});
+
+		if(lastUserEvent) {
+			let tempMessage;
+			if(lastUserEvent.event == 'login') {
+				tempMessage = 'Użytkownik <@' + lastUserEvent.id + '> zalogował się!';
+				//tempMessage = await guildContainer.workChannel.send('Użytkownik <@' + lastUserEvent.id + '> zalogował się!');
+			} else {
+				if(!lastUserEvent.userAction) {
+					tempMessage = 'Użytkownik <@' + lastUserEvent.id + '> został automatycznie wylogowany!';
+				} else {
+					tempMessage = 'Użytkownik <@' + lastUserEvent.id + '> wylogował się!';
+				}
+				
+				//tempMessage = await guildContainer.workChannel.send('Użytkownik <@' + lastUserEvent.id + '> wylogował się!');
+			}
+			let messages = guildContainer.workhoursTable.temporaryMessages;
+
+
+			var sendWaitingMessages = async function(messagesContainer) {
+				let messageToSend = '';
+
+				let messageTitle = '';
+				if(messagesContainer.waiting.length > 1) {
+					messageToSend = '**' + messagesContainer.waiting.length + ' użytkowników zmieniło status:**';
+				}
+				for(let i = 0 ; i < messagesContainer.waiting.length ; i++) {
+					messageToSend += '\n> ' + messagesContainer.waiting[i];
+				}
+				messagesContainer.waiting = [];
+
+				
+				const usersChangeEmbed = new Discord.MessageEmbed()
+				.setColor(Discord.Util.resolveColor("GREEN"))
+				.setTitle(messageTitle)
+				.setDescription(messageToSend);
+
+				let sentMessage = await guildContainer.workChannel.send(messageToSend)
+					.catch( (error) => {
+						log.error(error);
+					});
+
+				client.setTimeout(() => sentMessage.delete(), 60000);
+			}
+
+			// timer is active so there is something in queue
+			if(messages.sendTimer) {
+				messages.waiting.push(tempMessage);
+				clearTimeout(messages.sendTimer);
+
+				messages.sendTimer = setTimeout( (messageContainer) => {
+					sendWaitingMessages(messageContainer);
+				}, 3000, messages);
+
+			} else {
+				messages.waiting.push(tempMessage);
+
+				messages.sendTimer = setTimeout((messageContainer) => {
+					sendWaitingMessages(messageContainer);
+				}, 3000, messages);
+			}
+
+
+		}
 	}
 }
 
-function createCollectorForWorkhours(message, guildContainer) {
-	console.log("Creating collector!");
-	const filter = interaction => interaction.customID === 'workhours_login_button' || interaction.customID === 'workhours_logout_button';
-	guildContainer.hoursTableCollector = message.createMessageComponentInteractionCollector(filter, { time: 2147483000 });
+function createCollectorForWorkhours(guildContainer) {
+	log.verbose("Creating workhours collector for guild " + guildContainer.name);
 
-	guildContainer.hoursTableCollector.on('collect', (interaction) => {
+	const filter = interaction => interaction.customID === 'workhours_login_button' || interaction.customID === 'workhours_logout_button';
+	let collector = guildContainer.workhoursTable.message.createMessageComponentInteractionCollector(filter, { time: 2147483000 }); //2147483000
+
+	collector.on('collect', (interaction) => {
 		
 		if(interaction.customID === 'workhours_login_button') {
-			workhoursIn(interaction);
+			workhoursInInteraction(interaction);
 		} else {
-			workhoursOut(interaction);
+			workhoursOutInteraction(interaction);
 		}
-
-		//interaction.reply("Zalogowano!", { ephemeral: true });
-		
-		console.log(`Collected ${interaction.customID}`)
 	});
-	guildContainer.hoursTableCollector.on('end', collected => console.log(`Collected ${collected.size} items`));
+	collector.on('end', collected => {
+		log.verbose("Workhours collector for guild " + guildContainer.name + " finished! Recreating!");
+
+		if(guildContainer.workhoursTable?.message) {
+			createCollectorForWorkhours(guildContainer);
+		} else { 
+			guildContainer.workhoursTable = null;
+			updateHoursTable(guildContainer.workhoursTable.message.guild.id);
+		}
+	});
+
+	return collector;
 }
 
-////////////////////////
-async function workhoursIn(interaction) {
 
-	console.log('workhours in!');
+////////////////////////
+async function workhoursInInteraction(interaction) {
+
 	interaction.deferUpdate();
 
 	let guildId = interaction.guild.id;
@@ -637,6 +743,11 @@ async function workhoursIn(interaction) {
 	//message.author.id
 	const authorId = interaction.user.id;
 
+	let user = await db.users().findOne({id: authorId});
+
+	if(!user) {
+		createUser(interaction.member)
+	}
 
 	const newSchedule = 'lastSchedules.' + guildId;
 	const newScheduleEnd = newSchedule + '.dateEnd';
@@ -661,24 +772,30 @@ async function workhoursIn(interaction) {
 	let userFound = setActiveScheduleQuery.lastErrorObject.n;
 
 	if(userFound) {
-		updateHoursTable(interaction.guild, interaction);
+		let lastUserEvent = {
+			id: authorId,
+			event: 'login',
+			userAction: true
+		};
+
+		updateHoursTable(interaction.guild.id, lastUserEvent);
 	}else {
-		interaction.reply('Jesteś już zalogowany!', { ephemeral: true });
+		await interaction.followUp('Jesteś już zalogowany/a!', { ephemeral: true })
+			.catch( (error) => {
+				console.log(error);
+			});
+
+
 	}
 }
 
-async function workhoursOut(interaction) {
-
-	interaction.deferUpdate();
-	let guildId = interaction.guild.id;
-
-	const authorId = interaction.user.id;
+async function workhoursOut(userId, guildId, userAction = true) {
 
 	const lastSchedule = 'lastSchedules.' + guildId;
 	const lastScheduleEnd = lastSchedule + '.dateEnd';
 	const query = {
 		
-		id: authorId,
+		id: userId,
 		[lastScheduleEnd] : { $exists: true, $eq: null}
 	};
 
@@ -692,17 +809,20 @@ async function workhoursOut(interaction) {
 	//const user = await db.users().findOne(query);
 	const outQuery = await db.users().findOneAndUpdate(query, updateDoc);
 	let userFound = outQuery.lastErrorObject.n;
-	let user = outQuery.value;
+	let foundUser = outQuery.value;
 
 	if(userFound) {
+		let lastUserEvent = {
+			id: userId,
+			event: 'logout',
+			userAction: userAction
+		};
 
-		updateHoursTable(interaction.guild, interaction);
-
-		//save hours in database
+		updateHoursTable(guildId, lastUserEvent);
 
 		//const dateNow = moment(new Date()).format('YYYY-MM-DD[T00:00:00.000Z]');
 
-		let start = moment(user.lastSchedules[guildId].dateStart);
+		let start = moment(foundUser.lastSchedules[guildId].dateStart);
 		const startOfMonth = start.utc().startOf('month');
 		const endOfMonth   = startOfMonth.clone().utc().endOf('month');
 
@@ -710,7 +830,7 @@ async function workhoursOut(interaction) {
 		const endMonthDate = endOfMonth.toDate();
 
 		const query = {
-			userId: authorId,
+			userId: userId,
 			guildId: guildId,
 			firstDay: {
 				$eq: startMonthDate
@@ -722,14 +842,14 @@ async function workhoursOut(interaction) {
 
 		const update = {
 			$setOnInsert: {
-				userId: authorId,
+				userId: userId,
 				guildId: guildId,
 				firstDay: startMonthDate,
 				lastDay: endMonthDate,
 			},
 			$push: {
 				'schedules': {
-					dateStart: user.lastSchedules[guildId].dateStart,
+					dateStart: foundUser.lastSchedules[guildId].dateStart,
 					dateEnd: endDate
 				}
 			}
@@ -738,12 +858,67 @@ async function workhoursOut(interaction) {
 		const updated = await db.hours().updateOne(query, update, {upsert: true});
 	 
 		if(updated.matchedCount == 1) {
-			log.info('User ' + user.name + ' quit. Hours saved!');
+			
+			return true;
 		}
 	} else {
-		interaction.reply('Nie jesteś obecnie zalogowany/a do pracy. Najpierw użyj "/in" !', { ephemeral : true })
+		return false;
+	}
+}
+
+
+async function workhoursAutoLogout() {
+
+	//let users = await db.users().find().toArray();
+
+	let dateNow = new Date(Date.now() - 1000 * 60 * 60 * 20); // 20 hours
+
+	let users = await db.users().aggregate([
+		{ $project: { 
+			_id: 0,
+			id: 1,
+			name: 1,
+			schedule: { 
+				$objectToArray: "$lastSchedules" 
+			} 
+		} },
+		{ $unwind: "$schedule" },
+		{ $match: { 
+			//'schedules.v.dateStart' : { $ne: null },//{ $elemMatch : { v: { dateStart: { $ne: null} } } },
+			'schedule.v.dateStart' : { $lt: dateNow },
+			'schedule.v.dateEnd' : { $eq: null }, 
+		} },
+		//{ $group: { userId: "userId", name: "name"}}
+	]).toArray();
+
+	log.debug('Automatic logout scan, looking for target before ' + dateNow.toUTCString());
+
+	users.forEach( async (user) => {
+		console.log("User found: ");
+		log.debug("Autologout " + JSON.stringify(user));
+
+		await workhoursOut(user.id, user.schedule.k, false);
+	});
+}
+
+
+async function workhoursOutInteraction(interaction) {
+
+	interaction.deferUpdate();
+	let guildId = interaction.guild.id;
+
+	const authorId = interaction.user.id;
+
+	let user = await db.users().findOne({id: authorId});
+
+	if(!user) {
+		createUser(interaction.member)
 	}
 
+	const success = await workhoursOut(authorId, guildId);
+	if(!success) {
+		interaction.followUp('Nie jesteś obecnie zalogowany/a do pracy.', { ephemeral : true })
+	}
 }
 /////////////////////////////
 
@@ -793,7 +968,7 @@ async function inMessage(parsed, message) {
 	let userFound = setActiveScheduleQuery.lastErrorObject.n;
 
 	if(userFound) {
-		updateHoursTable(message.guild);
+		updateHoursTable(message.guild.id);
 	}else {
 		message.author.send('Jesteś już zalogowany!');
 	}
@@ -832,7 +1007,7 @@ async function outMessage(parsed, message) {
 
 	if(userFound) {
 
-		updateHoursTable(message.guild);
+		updateHoursTable(message.guild.id);
 
 		//save hours in database
 
@@ -1029,15 +1204,15 @@ client.on('message', message => {
 		});
 
 
-	//Always clear messages on workChannel, it needs to be kept clean
-	if(message.guild && bIsReady && guildsContainer[message.guild.id]) {
-		if(message.channel.id == guildsContainer[message.guild.id].workChannel.id) {
-			message.delete({timeout: 100})
-				.catch( e => {
-					log.error(e);
-				})
-		}
-	}
+	// //Always clear messages on workChannel, it needs to be kept clean
+	// if(message.guild && bIsReady && guildsContainer[message.guild.id]) {
+	// 	if(message.channel.id == guildsContainer[message.guild.id].workChannel.id) {
+	// 		message.delete({timeout: 100})
+	// 			.catch( e => {
+	// 				log.error(e);
+	// 			})
+	// 	}
+	// }
 
 
 	
