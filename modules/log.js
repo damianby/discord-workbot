@@ -5,10 +5,11 @@ const levels = {
 	error: 0, 
 	warn: 1, 
 	info: 2, 
-	verbose: 3, 
-	debug: 4, 
-	silly: 5 
-  };
+	http: 3,
+	verbose: 4, 
+	debug: 5, 
+	silly: 6 
+};
 
 
 const fs = require('fs');
@@ -74,7 +75,7 @@ function getLogger(label){
 				}),
 				new winston.transports.File({ 
 					filename: path.join(logDir, '/error.log'), 
-					level: 'error',
+					level: 'warn',
 					maxsize: 10000000
 				}),
 				new winston.transports.File({ 
