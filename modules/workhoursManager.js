@@ -132,7 +132,6 @@ class WorkhoursManager {
 
 
 	async #createMessage(content, additions) {
-
 		this.hoursDisplayMessage = await this.workChannel.send(content, additions)
 		.catch( e => {
 			this.log.error(e);
@@ -368,7 +367,7 @@ class WorkhoursManager {
 		collector.on('end', collected => {
 			this.log.verbose('Workhours collector for finished! Recreating!');
 	
-			createCollectorForWorkhours();
+			this.#createCollector();
 		});
 	
 		return collector;
