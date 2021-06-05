@@ -61,6 +61,8 @@ class WorkhoursManager {
 		await this.#wipe();
 		await this.updateHoursTable();
 
+		this.log.info('Manager created and running');
+
 		this.bIsValid = true;
 		return true;
 	}
@@ -77,13 +79,13 @@ class WorkhoursManager {
 	}
 
 	#findWorkChannelById(id) {
-		this.log.info('Looking for set workhours channel');
+		this.log.verbose('Looking for set workhours channel');
 
 		const channels = this.guild.channels.cache;
 		const foundChannel = channels.find(channel => channel.id === id && channel.isText());
 
 		if(foundChannel) {
-			this.log.info('Work channel \'' + foundChannel.name + '\' found');
+			this.log.verbose('Work channel \'' + foundChannel.name + '\' found');
 			return foundChannel;
 		}
 		
@@ -97,7 +99,7 @@ class WorkhoursManager {
 		const foundChannel = channels.find(channel => channel.name === name && channel.isText());
 
 		if(foundChannel) {
-			this.log.info('Work channel \'' + name + '\' found');
+			this.log.verbose('Work channel \'' + name + '\' found');
 			return foundChannel;
 		}
 		

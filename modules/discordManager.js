@@ -257,9 +257,6 @@ async function allMessage(parsed, message) {
 		.setColor('#00ff00')
 		.setDescription(parsed.body);
 
-
-
-	
 	const buttons = new Discord.MessageActionRow()
 		.addComponents([
 		new Discord.MessageButton()
@@ -276,7 +273,6 @@ async function allMessage(parsed, message) {
 	content += '----------\n' + sendMessage;
 
 	let approveMessage = await message.reply(content, { embed: embed, components: [buttons]})
-
 
 	const filter = interaction => interaction.customID === 'all_message_approve_button' || interaction.customID === 'all_message_dismiss_button';
 	const collector = approveMessage.createMessageComponentInteractionCollector(filter, { time: 20000 });

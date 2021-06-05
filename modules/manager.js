@@ -12,14 +12,6 @@ exports.initialize = function() {
 
 }
 
-exports.updateUsers = function(guildMembers) {
-
-}
-
-exports.createUser = function() {
-
-}
-
 exports.getOneTimeReport = function(id) {
 
 	if(reports[id]) {
