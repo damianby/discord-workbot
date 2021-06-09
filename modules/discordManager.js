@@ -11,6 +11,7 @@ moment.locale('pl');
 moment.tz.setDefault('Europe/Warsaw');
 const https = require('https');
 
+const { spawn } = require('child_process');
 
 const manager = require('./manager');
 
@@ -98,7 +99,7 @@ class CommandsManager {
 				func: trackMessage,
 				desc: 'Śledzenie zmian w repozytorium',
 				params: [{name: 'path', required: true}],
-				privileges: [GROUP.ADMIN]
+				privileges: [GROUP.EMPLOYEE]
 			},
 			all: {
 				name: 'all',
@@ -309,13 +310,34 @@ async function allMessage(parsed, message) {
 	
 }
 
+// globalchange change-submit //depot/... "/home/unix/triggers/globalchange.sh %changelist% %client% %user%"
+// trackMessage({arguments: ['test']});
+
 async function trackMessage(parsed, message) {
-	if(message.channel.type == 'text') {
+	//if(message.channel.type == 'text') {
 		let path = parsed.arguments[0];
 
-	} else {
+		let proc = spawn('p4', ['triggers', '-o']);
+
+		proc.stdout.on('data', data => {
+			console.log("out: " + data);
+		});
+
+		proc.stderr.on("data", data => {
+			console.log(`stderr: ${data}`);
+		});
+		
+		proc.on('error', (error) => {
+			console.log(`error: ${error.message}`);
+		});
+		
+		proc.on("close", code => {
+			console.log(`child process exited with code ${code}`);
+		});
+
+	//} else {
 		// error not in channel
-	}
+	//}
 }
 
 async function reportsMessage(parsed, message) {
