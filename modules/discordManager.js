@@ -274,12 +274,12 @@ async function allMessage(parsed, message) {
 
 	let approveMessage = await message.reply(content, { embed: embed, components: [buttons]})
 
-	const filter = interaction => interaction.customID === 'all_message_approve_button' || interaction.customID === 'all_message_dismiss_button';
+	const filter = interaction => interaction.customId === 'all_message_approve_button' || interaction.customId === 'all_message_dismiss_button';
 	const collector = approveMessage.createMessageComponentInteractionCollector(filter, { time: 20000 });
 
 	collector.on('collect', (interaction) => {
 
-		if(interaction.customID === 'all_message_approve_button') {
+		if(interaction.customId === 'all_message_approve_button') {
 
 			interaction.deferUpdate();
 			approveMessage.edit('**Wiadomość została wysłana!**', {components: [], embed: null});
@@ -538,14 +538,15 @@ async function mialekMessage(parsed, message) {
 	});
 }
 
-client.on('interaction', async interaction => {
-	//if (!interaction.isMessageComponent() && interaction.componentType !== 'BUTTON') return;
-	// if (interaction.customID === 'primary') {
-	// 	await interaction.update('A button was clicked!', { components: [] });
-	// }
+// deprecated!
+// client.on('interaction', async interaction => {
+// 	//if (!interaction.isMessageComponent() && interaction.componentType !== 'BUTTON') return;
+// 	// if (interaction.customId === 'primary') {
+// 	// 	await interaction.update('A button was clicked!', { components: [] });
+// 	// }
 
-	//console.log(interaction);
-});
+// 	//console.log(interaction);
+// });
 
 async function inMessage(parsed, message) {
 
@@ -692,7 +693,7 @@ client.on('rateLimit', info => {
 
 
 // Create an event listener for messages
-client.on('message', message => {
+client.on('messageCreate', message => {
 
 	CmdManager.dispatch(message)
 		.then( () => {

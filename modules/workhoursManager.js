@@ -107,7 +107,7 @@ class WorkhoursManager {
 	}
 
 	async #setChannelPermissions() {
-		await this.workChannel.updateOverwrite(this.workChannel.guild.roles.everyone, permissions.serialize())
+		await this.workChannel.permissionOverwrites.create(this.workChannel.guild.roles.everyone, permissions.serialize())
 			.catch( e => {
 				this.log(e);
 			})
@@ -131,8 +131,8 @@ class WorkhoursManager {
 	}
 
 
-	async #createMessage(content, additions) {
-		this.hoursDisplayMessage = await this.workChannel.send(content, additions)
+	async #createMessage(content) {
+		this.hoursDisplayMessage = await this.workChannel.send(content)
 		.catch( e => {
 			this.log.error(e);
 		});
@@ -226,11 +226,11 @@ class WorkhoursManager {
 		const buttons = new Discord.MessageActionRow()
 			.addComponents([
 			new Discord.MessageButton()
-				.setCustomID('workhours_login_button')
+				.setCustomId('workhours_login_button')
 				.setLabel('Login')
 				.setStyle('SUCCESS'),
 			new Discord.MessageButton()
-				.setCustomID('workhours_logout_button')
+				.setCustomId('workhours_logout_button')
 				.setLabel('Logout')
 				.setStyle('DANGER')
 			
@@ -245,20 +245,19 @@ class WorkhoursManager {
 
 		
 		if(!this.hoursDisplayMessage) {
-			await this.#createMessage(content, { embed: embed, components: [buttons]});
+			await this.#createMessage({ content: content, embeds: [ embed ], components: [buttons]});
 		} else {
 
 			//Event triggered involving users, it might be by user action or not(auto logout)
 			if(lastUserEvent) {
 
 				if(lastUserEvent.interaction) {
-					lastUserEvent.interaction.editReply(content, {embeds: [embed] });
-
+					lastUserEvent.interaction.editReply({content: content, embeds: [embed] });
 				} else {
-					await this.hoursDisplayMessage.edit(content, { embed: embed, components: [buttons]})
+					await this.hoursDisplayMessage.edit({content: content, embed: embed, components: [buttons]})
 					.catch( async (error) => {
 						if(error.code == Discord.Constants.APIErrors.UNKNOWN_MESSAGE) {
-							await this.#createMessage(content, { embed: embed, components: [buttons]});
+							await this.#createMessage({ content: content, embeds: [ embed ], components: [buttons]});
 						}
 					});
 				}
@@ -349,14 +348,13 @@ class WorkhoursManager {
 			return;
 		}
 	
-		const filter = interaction => interaction.customID === 'workhours_login_button' || interaction.customID === 'workhours_logout_button';
-		let collector = fetchedMessage.createMessageComponentInteractionCollector(filter, { time: 2147483000 }); //2147483000
+		const filter = interaction => interaction.customId === 'workhours_login_button' || interaction.customId === 'workhours_logout_button';
+		let collector = fetchedMessage.createMessageComponentCollector(filter, { time: 2147483000 }); //2147483000
 	
 		this.log.verbose('Collector on channel ' + this.workChannel.name + ' created!');
 	
-		collector.on('collect', (interaction) => {
-			
-			if(interaction.customID === 'workhours_login_button') {
+		collector.on('collect', async (interaction) => {
+			if(interaction.customId === 'workhours_login_button') {
 				this.#workhoursInInteraction(interaction);
 			} else {
 				this.#workhoursOutInteraction(interaction);
@@ -377,7 +375,7 @@ class WorkhoursManager {
 	////////////////////////
 	async #workhoursInInteraction(interaction) {
 
-		interaction.deferUpdate();
+		await interaction.deferUpdate();
 
 		let guildId = interaction.guild.id;
 
@@ -388,7 +386,7 @@ class WorkhoursManager {
 		let user = await db.users().findOne({id: authorId});
 
 		if(!user) {
-			await interaction.followUp('Niestety nie ma Cię na liście obecności, to raczej nie powinno się zdażyć ^^', { ephemeral: true })
+			await interaction.reply({ content: 'Niestety nie ma Cię na liście obecności, to raczej nie powinno się zdażyć ^^', ephemeral: true })
 				.catch( (error) => {
 					this.log.error(JSON.stringify(error));
 				});
@@ -425,8 +423,8 @@ class WorkhoursManager {
 			};
 
 			this.updateHoursTable(lastUserEvent);
-		}else {
-			await interaction.followUp('Jesteś już zalogowany/a!', { ephemeral: true })
+		} else {
+			await interaction.followUp({ content: 'Jesteś już zalogowany/a!', ephemeral: true })
 				.catch( (error) => {
 					console.log(error);
 				});
@@ -513,7 +511,7 @@ class WorkhoursManager {
 
 	async #workhoursOutInteraction(interaction) {
 
-		interaction.deferUpdate();
+		await interaction.deferUpdate();
 		let guildId = interaction.guild.id;
 
 		const authorId = interaction.user.id;
@@ -521,15 +519,15 @@ class WorkhoursManager {
 		let user = await db.users().findOne({id: authorId});
 
 		if(!user) {
-			await interaction.followUp('Niestety nie ma Cię na liście obecności, to raczej nie powinno się zdażyć ^^', { ephemeral: true })
+			await interaction.followUp({ content: 'Niestety nie ma Cię na liście obecności, to raczej nie powinno się zdażyć ^^', ephemeral: true })
 				.catch( (error) => {
 					this.log.error(JSON.stringify(error));
 				});
-		}
-
-		const success = await this.workhoursOut(authorId, guildId, interaction);
-		if(!success) {
-			interaction.followUp('Nie jesteś obecnie zalogowany/a do pracy.', { ephemeral : true })
+		} else {
+			const success = await this.workhoursOut(authorId, guildId, interaction);
+			if(!success) {
+				interaction.followUp({ content: 'Nie jesteś obecnie zalogowany/a do pracy.', ephemeral : true });
+			}
 		}
 	}
 }
@@ -593,6 +591,14 @@ async function create(client, guild, settings) {
 	throw new Error('Error creating new workhours manager');
 }
 
+function get(guildId) {
+	let manager = Managers[guildId];
+	if(manager) {
+		return manager;
+	} else {
+		return null;
+	}
+}
 
 
 // Indent all users based on longest name
@@ -619,5 +625,6 @@ function fixUsernames(userList) {
 
 
 module.exports = {
-	create: create
+	create: create,
+	get: get,
 };
