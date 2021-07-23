@@ -11,10 +11,10 @@ const LEVELS = {
 	silly: 6
 };
 
-
 const fs = require('fs');
 const path = require('path');
-const logDir = 'log'; // directory path you want to set
+const logDir = path.join(__dirname, 'log'); // directory path you want to set
+
 if (!fs.existsSync(logDir)) {
 	// Create the directory if it does not exist
 	fs.mkdirSync(logDir);
