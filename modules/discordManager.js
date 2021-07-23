@@ -496,6 +496,22 @@ async function createWorkhoursManagers() {
 	// };
 }
 
+const PerforceManager = require('./perforceManager');
+
+async function createPerforceManagers() {
+	let cachedGuilds = client.guilds.cache;
+	const guilds = await db.guilds().find().toArray();
+
+	for(const guild of guilds) {
+		if(guild?.perforce) {
+
+			let cachedGuild = cachedGuilds.find(g => g.id == guild.id);
+
+			await PerforceManager.create(client, cachedGuild, guild.perforce);
+		}
+	}
+}
+
 async function refresh() {
 	bIsReady = false;
 	
@@ -504,6 +520,7 @@ async function refresh() {
 
 	await createWorkhoursManagers();
 
+	await createPerforceManagers();
 
 	log.info('Is ready FINALLY!!!!!');
 	bIsReady = true;
