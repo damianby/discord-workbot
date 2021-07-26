@@ -4,6 +4,8 @@ const Discord = require('discord.js');
 const db = require('./db');
 const moment = require('moment-timezone');
 
+const factsManager = require('./facts');
+
 const manager = require('./manager');
 
 const WORK_CHANNEL_NAME = 'workhours';
@@ -491,6 +493,24 @@ class WorkhoursManager {
 			};
 
 			this.updateHoursTable(lastUserEvent);
+
+			let fact = await factsManager.getRandomFact();
+
+			if(fact != null) {
+
+				const factEmbed = new Discord.MessageEmbed()
+					.setColor('#0099ff')
+					.addField('Twój bezużyteczny fakt na dzisiaj', fact, true)
+					.setFooter('Ta wiadomość zniknie za jakiś czas, jeśli Ci przeszkadza kliknij \'Odrzuć tę wiadomość\'');
+
+					//.setTitle('Twój losowy fakt na dzisiaj')
+					//.setDescription(fact);
+
+				interaction.followUp({ embeds: [factEmbed], ephemeral: true })
+				.catch( (error) => {
+					this.log.error(error);
+				});
+			}
 		} else {
 			await interaction.followUp({ content: 'Jesteś już zalogowany/a!', ephemeral: true })
 				.catch( (error) => {

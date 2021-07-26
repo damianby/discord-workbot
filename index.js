@@ -57,8 +57,9 @@ db.connect("workbot").then( () => {
   
     //Manager.loadAllDatabases();
   
+	require('./modules/facts').rescan();
 
-    server.listen(config.host.port, config.host.addr, function(){
+	server.listen(config.host.port, config.host.addr, function(){
         log.verbose('Server started on ip ' + config.host.addr + ':' + config.host.port);
 
 
