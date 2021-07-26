@@ -4,6 +4,7 @@ const Discord = require('discord.js');
 const db = require('./db');
 const moment = require('moment-timezone');
 
+const manager = require('./manager');
 
 const WORK_CHANNEL_NAME = 'workhours';
 
@@ -232,9 +233,13 @@ class WorkhoursManager {
 			new Discord.MessageButton()
 				.setCustomId('workhours_logout_button')
 				.setLabel('Logout')
-				.setStyle('DANGER')
-			
+				.setStyle('DANGER'),
+			new Discord.MessageButton()
+				.setCustomId('workhours_report_button')
+				.setLabel('Report')
+				.setStyle('PRIMARY')
 			]);
+
 
 		let content = '**-- Przedszkolna lista obecności --**';
 
@@ -356,8 +361,10 @@ class WorkhoursManager {
 		collector.on('collect', async (interaction) => {
 			if(interaction.customId === 'workhours_login_button') {
 				this.#workhoursInInteraction(interaction);
-			} else {
+			} else if(interaction.customId === 'workhours_logout_button') {
 				this.#workhoursOutInteraction(interaction);
+			} else if(interaction.customId === 'workhours_report_button') {
+				this.#generateReportInteraction(interaction);
 			}
 	
 			collector.resetTimer();
@@ -373,6 +380,67 @@ class WorkhoursManager {
 
 	
 	////////////////////////
+
+	async #generateReportInteraction(interaction) {
+
+		await interaction.deferUpdate();
+
+		let hours = await db.hours().aggregate([
+			{ $match: { userId: interaction.user.id } },
+			{ $lookup: { 
+				from: 'guilds',
+				let: { localGuildId: '$guildId' },
+				pipeline: [
+						{ $match: { 
+							$expr: {
+								$eq: ['$id', '$$localGuildId']
+							},
+						} 
+					},
+					{ $project: { name: '$name', _id: 0 } },
+					{ $replaceRoot: { newRoot: '$$ROOT' } }
+				 ],
+				as: 'guild'
+			}},
+			{ $project: {
+				guild: {$arrayElemAt: [ '$guild', 0 ] },
+				year: {$year: {date:'$firstDay',timezone:'Europe/Warsaw'}},
+				month: {$month: {date:'$firstDay',timezone:'Europe/Warsaw'}},
+				schedules: {
+					$map: {
+						input: '$schedules',
+						as: 'schedule',
+						in: {
+							duration: {$divide: [{$subtract: ['$$schedule.dateEnd', '$$schedule.dateStart']}, 1000]},
+							day:{$dayOfMonth:{date:'$$schedule.dateStart',timezone:'Europe/Warsaw'}},
+							dayEnd: {$dayOfMonth:{date:'$$schedule.dateEnd',timezone:'Europe/Warsaw'}},
+							hour:{$hour:{date:'$$schedule.dateStart',timezone:'Europe/Warsaw'}},
+							hourEnd:{$hour:{date:'$$schedule.dateEnd',timezone:'Europe/Warsaw'}},
+							minute:{$minute:{date:'$$schedule.dateStart',timezone:'Europe/Warsaw'}},
+							minuteEnd:{$minute:{date:'$$schedule.dateEnd',timezone:'Europe/Warsaw'}},
+						}
+					}  
+				},
+			}},
+			{ $sort: { 'schedules.dateStart': 1}}
+		]).toArray();
+	
+		let link = manager.generateOneTimeReport(hours);
+	
+		const linkEmbed = new Discord.MessageEmbed()
+			.setColor('#00ff00')
+			.setTitle('Twój raport godzinowy')
+			.setDescription('Wygenerowany link jest jednorazowy, dostępny tylko dla Ciebie i zostanie dezaktywowany po 10 minutach!')
+			.setURL(link)
+			.setFooter('Ta wiadomość zniknie za jakiś czas, jeśli Ci przeszkadza kliknij \'Odrzuć tę wiadomość\'');
+
+
+		await interaction.followUp({ embeds: [linkEmbed], ephemeral: true })
+				.catch( (error) => {
+					console.log(error);
+				});
+	}
+
 	async #workhoursInInteraction(interaction) {
 
 		await interaction.deferUpdate();
