@@ -42,7 +42,7 @@ async function getRandomFact() {
 	const factFound = await db.facts().find().sort({ used: 1 }).limit(1).toArray();
 
 	let fact;
-	if(factFound) {
+	if(factFound.length > 0) {
 		fact = factFound[0];
 	} else {
 		return null;
