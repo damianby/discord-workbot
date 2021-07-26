@@ -161,7 +161,10 @@ class WorkhoursManager {
 					guilds: guildId,
 					[schedule] : { 
 						$exists: true,
-					}   
+					},
+					groups: {
+						$nin: ['notrack'],
+					}
 				} 
 			},
 			{ 
@@ -361,6 +364,22 @@ class WorkhoursManager {
 		this.log.verbose('Collector on channel ' + this.workChannel.name + ' created!');
 	
 		collector.on('collect', async (interaction) => {
+
+			let user = await db.users().findOne({ id: interaction.user.id });
+
+			if(user) {
+				if(user.groups.includes('notrack')) {
+
+					const errorEmbed = new Discord.MessageEmbed()
+						.setColor('#ff0000')
+						.setTitle('Nie możesz korzystać z tej funkcjonalności');
+
+					interaction.reply({embeds: [errorEmbed], ephemeral: true});
+
+					return;
+				}
+			}
+
 			if(interaction.customId === 'workhours_login_button') {
 				this.#workhoursInInteraction(interaction);
 			} else if(interaction.customId === 'workhours_logout_button') {

@@ -30,6 +30,7 @@ const GROUP = {
 	EMPLOYEE: 'employee',
 	WEEDLOVER: 'weedlover',
 	ADMIN: 'admin',
+	NOTRACK: 'notrack',
 };
 Object.freeze(GROUP);
 
