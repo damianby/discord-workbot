@@ -65,8 +65,8 @@ db.connect("workbot").then( () => {
 
     });
 }).catch( (e) => {
-    console.log("Data base error on start:");
-    console.log(e);
+    log.error("Data base error on start:");
+    log.error(e);
 });
 
 

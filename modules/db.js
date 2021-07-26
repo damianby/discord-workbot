@@ -3,7 +3,7 @@ const log = require('./log')("db");
 
 const { MongoClient } = require("mongodb");
 // Connection URI
-const uri = "mongodb://127.0.0.1:27017/?poolSize=20&writeConcern=majority";
+const uri = "mongodb+srv://nodebot:jj1IO7pAfEQR6izi@nodebotcluster.gxnyt.mongodb.net/workbot?retryWrites=true&w=majority";
 
 // Create a new MongoClient
 const client = new MongoClient(uri, {
@@ -21,13 +21,12 @@ async function connect() {
 	try {
 		// Connect the client to the server
 		await client.connect();
-		console.log("COnnected");
+		log.verbose("Connected to server");
 		// Establish and verify connection
 		
 		await client.db("workbot").command({ ping: 1 });
 
 		database = client.db("workbot");
-		console.log("Connected successfully to server");
 		usersColl =  await database.collection("users");
 		guildsColl = await database.collection("guilds");
 		hoursColl = await database.collection("hours");
