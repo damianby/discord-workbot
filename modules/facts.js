@@ -28,10 +28,9 @@ async function rescan() {
 					log.error(e);
 				});
 
-			fs.unlink(filepath)
-				.catch((e) => {
-					log.error(e);
-				});
+			fs.unlink(filepath, (e) => {
+				log.error(e);
+			});
 
 		}, function(err) {
 			throw err;
