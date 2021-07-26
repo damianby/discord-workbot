@@ -594,7 +594,7 @@ async function outMessage(parsed, message) {
 }
 async function removeGroupMessage(parsed, message) {
 
-	let user = getUserFromMention(parsed.arguments[0]);
+	let user = getUserFromMention(parsed.arguments[0]).trim();
 
 	//check if this works
 	if(!user) {
@@ -602,7 +602,7 @@ async function removeGroupMessage(parsed, message) {
 		return;
 	}
 
-	let isnum = /^\d+$/.test(user.id);
+	let isnum = /^\d+$/.test(user);
 	if(!isnum) {
 		message.author.send('Id nie jest liczbą!');
 		return;
@@ -611,12 +611,12 @@ async function removeGroupMessage(parsed, message) {
 	let removeGroup = parsed.arguments[1];
 
 	if(!GROUP[removeGroup.toUpperCase()]) {
-		message.author.send('Podana grupa nie istnieje!');
+		message.author.send({ content: 'Podana grupa nie istnieje!'});
 		return;
 	}
 
 	const query = {
-		id: parsed.arguments[0],
+		id: user,
 	};
 	
 	const update = {
@@ -635,7 +635,7 @@ async function removeGroupMessage(parsed, message) {
 			.setTitle('Grupy')
 			.setDescription('Usunięto grupę ' + removeGroup + ' użytkownikowi ' + updatedUser.name);
 
-		message.channel.send(embed);
+		message.channel.send({ embeds: [embed] });
 		//message.author.send('Usunięto grupe ' + removeGroup + ' użytkownikowi ' + updatedUser.name);
 	}
 
@@ -672,19 +672,19 @@ async function setGroupMessage(parsed, message) {
 	let isnum = /^\d+$/.test(user);
 	//let isnum = /^\d+$/.test(parsed.arguments[0]);
 	if(!isnum) {
-		message.author.send('Id nie jest liczbą!');
+		message.author.send({ content: 'Id nie jest liczbą!'});
 		return;
 	}
 
 	let newGroup = parsed.arguments[1];
 
 	if(!GROUP[newGroup.toUpperCase()]) {
-		message.author.send('Podana grupa nie istnieje!');
+		message.author.send({ content: 'Podana grupa nie istnieje!'});
 		return;
 	}
 
 	const query = {
-		id: parsed.arguments[0],
+		id: user,
 	};
 	
 	const update = {
@@ -704,23 +704,17 @@ async function setGroupMessage(parsed, message) {
 	
 	.setTitle('Grupy')
 
-
-	
-
 	if(updatedUser) {
-		embed.setDescription('Dodano grupę ' + removeGroup + ' użytkownikowi ' + updatedUser.name);
+		embed.setDescription('Dodano grupę ' + newGroup + ' użytkownikowi ' + updatedUser.name);
 		embed.setColor('#1DB954');
 
-		message.channel.send(embed);
+		message.channel.send({embeds: [embed]});
 	} else {
 		embed.setDescription('Podany użytkownik należy już do tej grupy');
 		embed.setColor('#FF0000');
 
-		message.author.send(embed);
+		message.author.send({embeds: [embed]});
 	}
-
-
-	
 }
 
 client.on('rateLimit', info => {
