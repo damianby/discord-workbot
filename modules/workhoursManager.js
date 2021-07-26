@@ -112,7 +112,7 @@ class WorkhoursManager {
 	async #setChannelPermissions() {
 		await this.workChannel.permissionOverwrites.create(this.workChannel.guild.roles.everyone, permissions.serialize())
 			.catch( e => {
-				this.log(e);
+				this.log.error(e);
 			})
 	}
 
