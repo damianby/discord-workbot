@@ -531,7 +531,12 @@ class WorkhoursManager {
 				});
 			}
 		} else {
-			await interaction.followUp({ content: 'Jesteś już zalogowany/a!', ephemeral: true })
+
+			const errorEmbed = new Discord.MessageEmbed()
+			.setColor('#ff0000')
+			.setTitle('Jesteś już zalogowany/a!');
+
+			await interaction.followUp({ embeds: [errorEmbed], ephemeral: true })
 				.catch( (error) => {
 					console.log(error);
 				});
@@ -633,7 +638,12 @@ class WorkhoursManager {
 		} else {
 			const success = await this.workhoursOut(authorId, guildId, interaction);
 			if(!success) {
-				interaction.followUp({ content: 'Nie jesteś obecnie zalogowany/a do pracy.', ephemeral : true });
+
+				const errorEmbed = new Discord.MessageEmbed()
+				.setColor('#ff0000')
+				.setTitle('Nie jesteś obecnie zalogowany/a do pracy!');
+
+				interaction.followUp({ embeds: [errorEmbed], ephemeral : true });
 			}
 		}
 	}
