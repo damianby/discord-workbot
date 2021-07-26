@@ -3,6 +3,7 @@ const log = require('./log')('discord-manager');
 
 const db = require('./db');
 
+const config = require('../config');
 
 const { parse } = require('discord-command-parser');
 
@@ -213,7 +214,7 @@ const CmdManager = new CommandsManager();
 
 
 exports.login = async function() {
-	client.login( 'ODQ0OTU5OTE1NTg3Nzk3MDY1.YKaAPg.XcA-_KDI6KCrngFVVQLprnBxOqc' )
+	client.login( config.discord.token )
 		.then( (token) => {
 			log.info('Logged in succesfully as bot!');
 		}).catch( (e) => {

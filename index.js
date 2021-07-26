@@ -4,6 +4,8 @@ global.__basedir = __dirname;
 console.log(global.__basedir);
 const log = require('./modules/log')("app");
 
+const config = require('./config');
+
 const express = require('express');
 const app = express();
 const http = require('http');
@@ -26,7 +28,6 @@ app.use(express.json({
     type: 'application/json',
     verify: undefined
 }));
-
 
 
 // app.use(
@@ -57,8 +58,8 @@ db.connect("workbot").then( () => {
     //Manager.loadAllDatabases();
   
 
-    server.listen(43000, "0.0.0.0", function(){
-        log.verbose("Server started on ip 0.0.0.0:80");
+    server.listen(config.host.port, config.host.addr, function(){
+        log.verbose('Server started on ip ' + config.host.addr + ':' + config.host.port);
 
 
         discordManager.login();

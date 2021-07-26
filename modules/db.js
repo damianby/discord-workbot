@@ -1,14 +1,15 @@
 const log = require('./log')("db");
 
+const config = require('../config');
 
 const { MongoClient } = require("mongodb");
 // Connection URI
-const uri = "mongodb+srv://nodebot:jj1IO7pAfEQR6izi@nodebotcluster.gxnyt.mongodb.net/workbot?retryWrites=true&w=majority";
+const uri = config.mongo.uri;
 
 // Create a new MongoClient
 const client = new MongoClient(uri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+	useNewUrlParser: true,
+	useUnifiedTopology: true,
 });
 
 let database;
@@ -24,10 +25,10 @@ async function connect() {
 		log.verbose("Connected to server");
 		// Establish and verify connection
 		
-		await client.db("workbot").command({ ping: 1 });
+		await client.db(config.mongo.db).command({ ping: 1 });
 
-		database = client.db("workbot");
-		usersColl =  await database.collection("users");
+		database = client.db(config.mongo.db);
+		usersColl = await database.collection("users");
 		guildsColl = await database.collection("guilds");
 		hoursColl = await database.collection("hours");
 		perforceColl = await database.collection("perforce");

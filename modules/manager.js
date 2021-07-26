@@ -5,8 +5,7 @@ const log = require('./log')('manager');
 
 const crypto = require('crypto');
 
-const IP = '192.168.1.108';
-const PORT = 43000;
+const config = require('../config');
 
 const reports = new Map();
 
@@ -44,5 +43,5 @@ exports.generateOneTimeReport = function(reportData) {
 		date: new Date(),
 	});
 
-	return 'http://' + IP + ':' + PORT.toString() + '/report/' + id;
+	return 'http://' + config.web.addr + '/report/' + id;
 }
