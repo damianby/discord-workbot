@@ -148,7 +148,7 @@ class WorkhoursManager {
 
 		const guildId = this.guild.id;
 
-		this.log.verbose('Updating workhours table');
+		this.log.silly('Updating workhours table');
 		const schedule = 'lastSchedules.' + guildId;
 
 		let users = [];

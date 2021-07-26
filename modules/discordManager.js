@@ -523,7 +523,7 @@ async function refresh() {
 
 	await createPerforceManagers();
 
-	log.info('Is ready FINALLY!!!!!');
+	log.info('Refresh finished');
 	bIsReady = true;
 }
 
