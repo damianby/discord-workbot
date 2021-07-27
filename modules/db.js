@@ -16,6 +16,7 @@ let usersColl;
 let guildsColl;
 let hoursColl;
 let perforceColl;
+let tournamentsColl;
 
 async function connect() {
 	try {
@@ -32,6 +33,7 @@ async function connect() {
 		guildsColl = await database.collection("guilds");
 		hoursColl = await database.collection("hours");
 		perforceColl = await database.collection("perforce");
+		tournamentsColl = await database.collection("tournamentsColl");
 	} catch (err) {
 		throw new Error(err);
 	}
@@ -53,6 +55,10 @@ function hours(){
 
 function perforce() {
 	return perforceColl;
+}
+
+function tournaments() {
+	return tournamentsColl;
 }
 
 async function close(){
@@ -80,5 +86,6 @@ module.exports = {
 	close,
 	users,
 	guilds,
-	hours
+	hours,
+	tournaments,
 };

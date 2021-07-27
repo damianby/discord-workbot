@@ -48,6 +48,11 @@ app.use('/', routes);
 app.use(express.static(path.join(__basedir, 'Public')));
 
 
+
+
+const tournament = require('./modules/tournament');
+
+
 manager.initialize();
 
 const db = require('./modules/db');
@@ -55,19 +60,16 @@ const db = require('./modules/db');
 db.connect("workbot").then( () => {
     log.info("Connected to database workbot");
   
-    //Manager.loadAllDatabases();
-  
 
     server.listen(43000, "0.0.0.0", function(){
         log.verbose("Server started on ip 0.0.0.0:80");
 
 
-        discordManager.login();
+        //discordManager.login();
 
     });
 }).catch( (e) => {
-    console.log("Data base error on start:");
-    console.log(e);
+    log.error("Database connection error: " + e);
 });
 
 

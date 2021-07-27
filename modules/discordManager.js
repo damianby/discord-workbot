@@ -18,12 +18,9 @@ const manager = require('./manager');
 const Discord = require('discord.js');
 
 // Create an instance of a Discord client
-const client = new Discord.Client({ intents: Discord.Intents.ALL });
+const client = new Discord.Client({ intents: Discord.Intents.ALL });//, partials: ['MESSAGE', 'CHANNEL', 'REACTION']  });
 
 let bIsReady = false;
-
-const WORK_CHANNEL_NAME = 'workhours';
-
 
 const GROUP = {
 	EMPLOYEE: 'employee',
@@ -438,6 +435,8 @@ async function updateDatabase() {
 					isActive: true,
 					settings: {
 						channelId: null,
+						sendNotifications: true,
+
 					}
 				},
 				preforceServers: []
@@ -690,10 +689,14 @@ client.on('rateLimit', info => {
 	log.info(JSON.stringify(info));
 });
 
+process.on('unhandledRejection', error => {
+	console.error('Unhandled promise rejection:', error);
+});
 
 // Create an event listener for messages
 client.on('message', message => {
 
+	//console.log(message);
 	CmdManager.dispatch(message)
 		.then( () => {
 
