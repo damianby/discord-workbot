@@ -21,8 +21,6 @@ async function rescan() {
 				};
 			});
 
-			filteredFacts.length = 10;
-
 			await db.facts().insertMany(filteredFacts)
 				.catch(e => {
 					log.error(e);
