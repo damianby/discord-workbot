@@ -696,6 +696,10 @@ setInterval(workhoursAutoLogout, 1000 * 60); // once a minute
 
 async function create(client, guild, settings) {
 
+	if(Managers[guild.id]) {
+		return Managers[guild.id];
+	} 
+
 	if(client && guild) {
 		let newManager = new WorkhoursManager(client, guild, settings);
 		if(await newManager.initialize()) {
