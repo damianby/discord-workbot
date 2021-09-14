@@ -5,7 +5,6 @@ const ejs_helpers = require('../Public/functions');
 
 module.exports = function(req, res) {
 
-    console.log(req.params.reportId);
     if(req.params.reportId) {
         let reports = manager.getOneTimeReport(req.params.reportId);
 

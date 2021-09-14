@@ -1,14 +1,15 @@
 const log = require('./log')("db");
 
+const config = require('../config');
 
 const { MongoClient } = require("mongodb");
 // Connection URI
-const uri = "mongodb://127.0.0.1:27017/?poolSize=20&writeConcern=majority";
+const uri = config.mongo.uri;
 
 // Create a new MongoClient
 const client = new MongoClient(uri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+	useNewUrlParser: true,
+	useUnifiedTopology: true,
 });
 
 let database;
@@ -17,23 +18,24 @@ let guildsColl;
 let hoursColl;
 let perforceColl;
 let tournamentsColl;
+let factsColl;
 
 async function connect() {
 	try {
 		// Connect the client to the server
 		await client.connect();
-		console.log("COnnected");
+		log.verbose("Connected to server");
 		// Establish and verify connection
 		
-		await client.db("workbot").command({ ping: 1 });
+		await client.db(config.mongo.db).command({ ping: 1 });
 
-		database = client.db("workbot");
-		console.log("Connected successfully to server");
-		usersColl =  await database.collection("users");
+		database = client.db(config.mongo.db);
+		usersColl = await database.collection("users");
 		guildsColl = await database.collection("guilds");
 		hoursColl = await database.collection("hours");
 		perforceColl = await database.collection("perforce");
 		tournamentsColl = await database.collection("tournamentsColl");
+		factsColl = await database.collection("facts");
 	} catch (err) {
 		throw new Error(err);
 	}
@@ -59,6 +61,10 @@ function perforce() {
 
 function tournaments() {
 	return tournamentsColl;
+}
+
+function facts() {
+	return factsColl;
 }
 
 async function close(){
@@ -88,4 +94,5 @@ module.exports = {
 	guilds,
 	hours,
 	tournaments,
+	facts,
 };

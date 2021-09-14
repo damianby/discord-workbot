@@ -4,6 +4,9 @@ const Discord = require('discord.js');
 const db = require('./db');
 const moment = require('moment-timezone');
 
+const factsManager = require('./facts');
+
+const manager = require('./manager');
 
 const WORK_CHANNEL_NAME = 'workhours';
 
@@ -107,9 +110,9 @@ class WorkhoursManager {
 	}
 
 	async #setChannelPermissions() {
-		await this.workChannel.updateOverwrite(this.workChannel.guild.roles.everyone, permissions.serialize())
+		await this.workChannel.permissionOverwrites.create(this.workChannel.guild.roles.everyone, permissions.serialize())
 			.catch( e => {
-				this.log(e);
+				this.log.error(e);
 			})
 	}
 
@@ -131,8 +134,8 @@ class WorkhoursManager {
 	}
 
 
-	async #createMessage(content, additions) {
-		this.hoursDisplayMessage = await this.workChannel.send(content, additions)
+	async #createMessage(content) {
+		this.hoursDisplayMessage = await this.workChannel.send(content)
 		.catch( e => {
 			this.log.error(e);
 		});
@@ -145,7 +148,7 @@ class WorkhoursManager {
 
 		const guildId = this.guild.id;
 
-		this.log.verbose('Updating workhours table');
+		this.log.silly('Updating workhours table');
 		const schedule = 'lastSchedules.' + guildId;
 
 		let users = [];
@@ -158,7 +161,10 @@ class WorkhoursManager {
 					guilds: guildId,
 					[schedule] : { 
 						$exists: true,
-					}   
+					},
+					groups: {
+						$nin: ['notrack'],
+					}
 				} 
 			},
 			{ 
@@ -226,15 +232,19 @@ class WorkhoursManager {
 		const buttons = new Discord.MessageActionRow()
 			.addComponents([
 			new Discord.MessageButton()
-				.setCustomID('workhours_login_button')
+				.setCustomId('workhours_login_button')
 				.setLabel('Login')
 				.setStyle('SUCCESS'),
 			new Discord.MessageButton()
-				.setCustomID('workhours_logout_button')
+				.setCustomId('workhours_logout_button')
 				.setLabel('Logout')
-				.setStyle('DANGER')
-			
+				.setStyle('DANGER'),
+			new Discord.MessageButton()
+				.setCustomId('workhours_report_button')
+				.setLabel('Report')
+				.setStyle('PRIMARY')
 			]);
+
 
 		let content = '**-- Przedszkolna lista obecności --**';
 
@@ -245,20 +255,19 @@ class WorkhoursManager {
 
 		
 		if(!this.hoursDisplayMessage) {
-			await this.#createMessage(content, { embed: embed, components: [buttons]});
+			await this.#createMessage({ content: content, embeds: [ embed ], components: [buttons]});
 		} else {
 
 			//Event triggered involving users, it might be by user action or not(auto logout)
 			if(lastUserEvent) {
 
 				if(lastUserEvent.interaction) {
-					lastUserEvent.interaction.editReply(content, {embeds: [embed] });
-
+					lastUserEvent.interaction.editReply({content: content, embeds: [embed] });
 				} else {
-					await this.hoursDisplayMessage.edit(content, { embed: embed, components: [buttons]})
+					await this.hoursDisplayMessage.edit({content: content, embed: embed, components: [buttons]})
 					.catch( async (error) => {
 						if(error.code == Discord.Constants.APIErrors.UNKNOWN_MESSAGE) {
-							await this.#createMessage(content, { embed: embed, components: [buttons]});
+							await this.#createMessage({ content: content, embeds: [ embed ], components: [buttons]});
 						}
 					});
 				}
@@ -349,17 +358,34 @@ class WorkhoursManager {
 			return;
 		}
 	
-		const filter = interaction => interaction.customID === 'workhours_login_button' || interaction.customID === 'workhours_logout_button';
-		let collector = fetchedMessage.createMessageComponentInteractionCollector(filter, { time: 2147483000 }); //2147483000
+		const filter = interaction => interaction.customId === 'workhours_login_button' || interaction.customId === 'workhours_logout_button';
+		let collector = fetchedMessage.createMessageComponentCollector(filter, { time: 2147483000 }); //2147483000
 	
 		this.log.verbose('Collector on channel ' + this.workChannel.name + ' created!');
 	
-		collector.on('collect', (interaction) => {
-			
-			if(interaction.customID === 'workhours_login_button') {
+		collector.on('collect', async (interaction) => {
+
+			let user = await db.users().findOne({ id: interaction.user.id });
+
+			if(user) {
+				if(user.groups.includes('notrack')) {
+
+					const errorEmbed = new Discord.MessageEmbed()
+						.setColor('#ff0000')
+						.setTitle('Nie możesz korzystać z tej funkcjonalności');
+
+					interaction.reply({embeds: [errorEmbed], ephemeral: true});
+
+					return;
+				}
+			}
+
+			if(interaction.customId === 'workhours_login_button') {
 				this.#workhoursInInteraction(interaction);
-			} else {
+			} else if(interaction.customId === 'workhours_logout_button') {
 				this.#workhoursOutInteraction(interaction);
+			} else if(interaction.customId === 'workhours_report_button') {
+				this.#generateReportInteraction(interaction);
 			}
 	
 			collector.resetTimer();
@@ -375,9 +401,70 @@ class WorkhoursManager {
 
 	
 	////////////////////////
+
+	async #generateReportInteraction(interaction) {
+
+		await interaction.deferUpdate();
+
+		let hours = await db.hours().aggregate([
+			{ $match: { userId: interaction.user.id } },
+			{ $lookup: { 
+				from: 'guilds',
+				let: { localGuildId: '$guildId' },
+				pipeline: [
+						{ $match: { 
+							$expr: {
+								$eq: ['$id', '$$localGuildId']
+							},
+						} 
+					},
+					{ $project: { name: '$name', _id: 0 } },
+					{ $replaceRoot: { newRoot: '$$ROOT' } }
+				 ],
+				as: 'guild'
+			}},
+			{ $project: {
+				guild: {$arrayElemAt: [ '$guild', 0 ] },
+				year: {$year: {date:'$firstDay',timezone:'Europe/Warsaw'}},
+				month: {$month: {date:'$firstDay',timezone:'Europe/Warsaw'}},
+				schedules: {
+					$map: {
+						input: '$schedules',
+						as: 'schedule',
+						in: {
+							duration: {$divide: [{$subtract: ['$$schedule.dateEnd', '$$schedule.dateStart']}, 1000]},
+							day:{$dayOfMonth:{date:'$$schedule.dateStart',timezone:'Europe/Warsaw'}},
+							dayEnd: {$dayOfMonth:{date:'$$schedule.dateEnd',timezone:'Europe/Warsaw'}},
+							hour:{$hour:{date:'$$schedule.dateStart',timezone:'Europe/Warsaw'}},
+							hourEnd:{$hour:{date:'$$schedule.dateEnd',timezone:'Europe/Warsaw'}},
+							minute:{$minute:{date:'$$schedule.dateStart',timezone:'Europe/Warsaw'}},
+							minuteEnd:{$minute:{date:'$$schedule.dateEnd',timezone:'Europe/Warsaw'}},
+						}
+					}  
+				},
+			}},
+			{ $sort: { 'schedules.dateStart': 1}}
+		]).toArray();
+	
+		let link = manager.generateOneTimeReport(hours);
+	
+		const linkEmbed = new Discord.MessageEmbed()
+			.setColor('#00ff00')
+			.setTitle('Twój raport godzinowy')
+			.setDescription('Wygenerowany link jest jednorazowy, dostępny tylko dla Ciebie i zostanie dezaktywowany po 10 minutach!')
+			.setURL(link)
+			.setFooter('Ta wiadomość zniknie za jakiś czas, jeśli Ci przeszkadza kliknij \'Odrzuć tę wiadomość\'');
+
+
+		await interaction.followUp({ embeds: [linkEmbed], ephemeral: true })
+				.catch( (error) => {
+					console.log(error);
+				});
+	}
+
 	async #workhoursInInteraction(interaction) {
 
-		interaction.deferUpdate();
+		await interaction.deferUpdate();
 
 		let guildId = interaction.guild.id;
 
@@ -388,7 +475,7 @@ class WorkhoursManager {
 		let user = await db.users().findOne({id: authorId});
 
 		if(!user) {
-			await interaction.followUp('Niestety nie ma Cię na liście obecności, to raczej nie powinno się zdażyć ^^', { ephemeral: true })
+			await interaction.reply({ content: 'Niestety nie ma Cię na liście obecności, to raczej nie powinno się zdażyć ^^', ephemeral: true })
 				.catch( (error) => {
 					this.log.error(JSON.stringify(error));
 				});
@@ -425,8 +512,31 @@ class WorkhoursManager {
 			};
 
 			this.updateHoursTable(lastUserEvent);
-		}else {
-			await interaction.followUp('Jesteś już zalogowany/a!', { ephemeral: true })
+
+			let fact = await factsManager.getRandomFact();
+
+			if(fact != null) {
+
+				const factEmbed = new Discord.MessageEmbed()
+					.setColor('#0099ff')
+					.addField('Twój bezużyteczny fakt na dzisiaj', fact, true)
+					.setFooter('Ta wiadomość zniknie za jakiś czas, jeśli Ci przeszkadza kliknij \'Odrzuć tę wiadomość\'');
+
+					//.setTitle('Twój losowy fakt na dzisiaj')
+					//.setDescription(fact);
+
+				interaction.followUp({ embeds: [factEmbed], ephemeral: true })
+				.catch( (error) => {
+					this.log.error(error);
+				});
+			}
+		} else {
+
+			const errorEmbed = new Discord.MessageEmbed()
+			.setColor('#ff0000')
+			.setTitle('Jesteś już zalogowany/a!');
+
+			await interaction.followUp({ embeds: [errorEmbed], ephemeral: true })
 				.catch( (error) => {
 					console.log(error);
 				});
@@ -513,7 +623,7 @@ class WorkhoursManager {
 
 	async #workhoursOutInteraction(interaction) {
 
-		interaction.deferUpdate();
+		await interaction.deferUpdate();
 		let guildId = interaction.guild.id;
 
 		const authorId = interaction.user.id;
@@ -521,15 +631,20 @@ class WorkhoursManager {
 		let user = await db.users().findOne({id: authorId});
 
 		if(!user) {
-			await interaction.followUp('Niestety nie ma Cię na liście obecności, to raczej nie powinno się zdażyć ^^', { ephemeral: true })
+			await interaction.followUp({ content: 'Niestety nie ma Cię na liście obecności, to raczej nie powinno się zdażyć ^^', ephemeral: true })
 				.catch( (error) => {
 					this.log.error(JSON.stringify(error));
 				});
-		}
+		} else {
+			const success = await this.workhoursOut(authorId, guildId, interaction);
+			if(!success) {
 
-		const success = await this.workhoursOut(authorId, guildId, interaction);
-		if(!success) {
-			interaction.followUp('Nie jesteś obecnie zalogowany/a do pracy.', { ephemeral : true })
+				const errorEmbed = new Discord.MessageEmbed()
+				.setColor('#ff0000')
+				.setTitle('Nie jesteś obecnie zalogowany/a do pracy!');
+
+				interaction.followUp({ embeds: [errorEmbed], ephemeral : true });
+			}
 		}
 	}
 }
@@ -593,6 +708,14 @@ async function create(client, guild, settings) {
 	throw new Error('Error creating new workhours manager');
 }
 
+function get(guildId) {
+	let manager = Managers[guildId];
+	if(manager) {
+		return manager;
+	} else {
+		return null;
+	}
+}
 
 
 // Indent all users based on longest name
@@ -619,5 +742,6 @@ function fixUsernames(userList) {
 
 
 module.exports = {
-	create: create
+	create: create,
+	get: get,
 };

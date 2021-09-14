@@ -1,9 +1,10 @@
 'use strict';
 
-
-
 global.__basedir = __dirname;
+console.log(global.__basedir);
 const log = require('./modules/log')("app");
+
+const config = require('./config');
 
 const express = require('express');
 const app = express();
@@ -15,7 +16,7 @@ var path = require('path');
 const routes = require('./routes/routes');
 const manager = require('./modules/manager');
  
-const sass = require('node-sass-middleware');
+// const sass = require('node-sass-middleware');
 
 const discordManager = require('./modules/discordManager');
 
@@ -29,15 +30,14 @@ app.use(express.json({
 }));
 
 
-
-app.use(
-    sass({
-        src: path.join(__dirname, 'sass'), //where the sass files are 
-        dest: path.join(__dirname, 'public', 'css'), //where css should go
-        debug: true, // obvious,
-        prefix: '/css'
-    })
-);
+// app.use(
+//     sass({
+//         src: path.join(__dirname, 'sass'), //where the sass files are 
+//         dest: path.join(__dirname, 'public', 'css'), //where css should go
+//         debug: true, // obvious,
+//         prefix: '/css'
+//     })
+// );
 
 app.set('views', path.join(__basedir, 'Public'));
 app.set('view engine', 'ejs');
@@ -60,9 +60,12 @@ const db = require('./modules/db');
 db.connect("workbot").then( () => {
     log.info("Connected to database workbot");
   
+    //Manager.loadAllDatabases();
+  
+	require('./modules/facts').rescan();
 
-    server.listen(43000, "0.0.0.0", function(){
-        log.verbose("Server started on ip 0.0.0.0:80");
+	server.listen(config.host.port, config.host.addr, function(){
+        log.verbose('Server started on ip ' + config.host.addr + ':' + config.host.port);
 
 
         //discordManager.login();
@@ -70,6 +73,8 @@ db.connect("workbot").then( () => {
     });
 }).catch( (e) => {
     log.error("Database connection error: " + e);
+    log.error("Data base error on start:");
+    log.error(e);
 });
 
 

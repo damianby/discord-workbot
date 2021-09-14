@@ -11,10 +11,10 @@ const LEVELS = {
 	silly: 6
 };
 
-
 const fs = require('fs');
 const path = require('path');
-const logDir = 'log'; // directory path you want to set
+const logDir = path.join(__dirname, 'log'); // directory path you want to set
+
 if (!fs.existsSync(logDir)) {
 	// Create the directory if it does not exist
 	fs.mkdirSync(logDir);
@@ -63,7 +63,7 @@ function getLogger(label) {
 				// - Write all logs error (and below) to `error.log`.
 				//
 				new winston.transports.Console({
-					level: 'debug',
+					level: 'info',
 				}),
 				new winston.transports.File({ 
 					filename: path.join(logDir, '/error.log'),

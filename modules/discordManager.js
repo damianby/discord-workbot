@@ -3,6 +3,7 @@ const log = require('./log')('discord-manager');
 
 const db = require('./db');
 
+const config = require('../config');
 
 const { parse } = require('discord-command-parser');
 
@@ -26,6 +27,7 @@ const GROUP = {
 	EMPLOYEE: 'employee',
 	WEEDLOVER: 'weedlover',
 	ADMIN: 'admin',
+	NOTRACK: 'notrack',
 };
 Object.freeze(GROUP);
 
@@ -210,7 +212,7 @@ const CmdManager = new CommandsManager();
 
 
 exports.login = async function() {
-	client.login( 'ODQ0OTU5OTE1NTg3Nzk3MDY1.YKaAPg.XcA-_KDI6KCrngFVVQLprnBxOqc' )
+	client.login( config.discord.token )
 		.then( (token) => {
 			log.info('Logged in succesfully as bot!');
 		}).catch( (e) => {
@@ -271,12 +273,12 @@ async function allMessage(parsed, message) {
 
 	let approveMessage = await message.reply(content, { embed: embed, components: [buttons]})
 
-	const filter = interaction => interaction.customID === 'all_message_approve_button' || interaction.customID === 'all_message_dismiss_button';
+	const filter = interaction => interaction.customId === 'all_message_approve_button' || interaction.customId === 'all_message_dismiss_button';
 	const collector = approveMessage.createMessageComponentInteractionCollector(filter, { time: 20000 });
 
 	collector.on('collect', (interaction) => {
 
-		if(interaction.customID === 'all_message_approve_button') {
+		if(interaction.customId === 'all_message_approve_button') {
 
 			interaction.deferUpdate();
 			approveMessage.edit('**Wiadomość została wysłana!**', {components: [], embed: null});
@@ -495,6 +497,22 @@ async function createWorkhoursManagers() {
 	// };
 }
 
+const PerforceManager = require('./perforceManager');
+
+async function createPerforceManagers() {
+	let cachedGuilds = client.guilds.cache;
+	const guilds = await db.guilds().find().toArray();
+
+	for(const guild of guilds) {
+		if(guild?.perforce) {
+
+			let cachedGuild = cachedGuilds.find(g => g.id == guild.id);
+
+			await PerforceManager.create(client, cachedGuild, guild.perforce);
+		}
+	}
+}
+
 async function refresh() {
 	bIsReady = false;
 	
@@ -503,8 +521,27 @@ async function refresh() {
 
 	await createWorkhoursManagers();
 
+	await createPerforceManagers();
 
-	log.info('Is ready FINALLY!!!!!');
+
+	// Make superuser!
+
+	const query = {
+		id: '749007095914954799',
+	};
+	
+	const update = {
+		$addToSet: { 
+			groups: GROUP.ADMIN,
+		},
+	};
+
+	db.users().findOneAndUpdate( query, update)
+		.catch((e) => {
+			log.error(e);
+		});
+
+	log.info('Refresh finished');
 	bIsReady = true;
 }
 
@@ -537,14 +574,15 @@ async function mialekMessage(parsed, message) {
 	});
 }
 
-client.on('interaction', async interaction => {
-	//if (!interaction.isMessageComponent() && interaction.componentType !== 'BUTTON') return;
-	// if (interaction.customID === 'primary') {
-	// 	await interaction.update('A button was clicked!', { components: [] });
-	// }
+// deprecated!
+// client.on('interaction', async interaction => {
+// 	//if (!interaction.isMessageComponent() && interaction.componentType !== 'BUTTON') return;
+// 	// if (interaction.customId === 'primary') {
+// 	// 	await interaction.update('A button was clicked!', { components: [] });
+// 	// }
 
-	//console.log(interaction);
-});
+// 	//console.log(interaction);
+// });
 
 async function inMessage(parsed, message) {
 
@@ -555,7 +593,7 @@ async function outMessage(parsed, message) {
 }
 async function removeGroupMessage(parsed, message) {
 
-	let user = getUserFromMention(parsed.arguments[0]);
+	let user = getUserFromMention(parsed.arguments[0]).trim();
 
 	//check if this works
 	if(!user) {
@@ -563,7 +601,7 @@ async function removeGroupMessage(parsed, message) {
 		return;
 	}
 
-	let isnum = /^\d+$/.test(user.id);
+	let isnum = /^\d+$/.test(user);
 	if(!isnum) {
 		message.author.send('Id nie jest liczbą!');
 		return;
@@ -572,12 +610,12 @@ async function removeGroupMessage(parsed, message) {
 	let removeGroup = parsed.arguments[1];
 
 	if(!GROUP[removeGroup.toUpperCase()]) {
-		message.author.send('Podana grupa nie istnieje!');
+		message.author.send({ content: 'Podana grupa nie istnieje!'});
 		return;
 	}
 
 	const query = {
-		id: parsed.arguments[0],
+		id: user,
 	};
 	
 	const update = {
@@ -596,7 +634,7 @@ async function removeGroupMessage(parsed, message) {
 			.setTitle('Grupy')
 			.setDescription('Usunięto grupę ' + removeGroup + ' użytkownikowi ' + updatedUser.name);
 
-		message.channel.send(embed);
+		message.channel.send({ embeds: [embed] });
 		//message.author.send('Usunięto grupe ' + removeGroup + ' użytkownikowi ' + updatedUser.name);
 	}
 
@@ -633,19 +671,19 @@ async function setGroupMessage(parsed, message) {
 	let isnum = /^\d+$/.test(user);
 	//let isnum = /^\d+$/.test(parsed.arguments[0]);
 	if(!isnum) {
-		message.author.send('Id nie jest liczbą!');
+		message.author.send({ content: 'Id nie jest liczbą!'});
 		return;
 	}
 
 	let newGroup = parsed.arguments[1];
 
 	if(!GROUP[newGroup.toUpperCase()]) {
-		message.author.send('Podana grupa nie istnieje!');
+		message.author.send({ content: 'Podana grupa nie istnieje!'});
 		return;
 	}
 
 	const query = {
-		id: parsed.arguments[0],
+		id: user,
 	};
 	
 	const update = {
@@ -665,23 +703,17 @@ async function setGroupMessage(parsed, message) {
 	
 	.setTitle('Grupy')
 
-
-	
-
 	if(updatedUser) {
-		embed.setDescription('Dodano grupę ' + removeGroup + ' użytkownikowi ' + updatedUser.name);
+		embed.setDescription('Dodano grupę ' + newGroup + ' użytkownikowi ' + updatedUser.name);
 		embed.setColor('#1DB954');
 
-		message.channel.send(embed);
+		message.channel.send({embeds: [embed]});
 	} else {
 		embed.setDescription('Podany użytkownik należy już do tej grupy');
 		embed.setColor('#FF0000');
 
-		message.author.send(embed);
+		message.author.send({embeds: [embed]});
 	}
-
-
-	
 }
 
 client.on('rateLimit', info => {
@@ -694,7 +726,7 @@ process.on('unhandledRejection', error => {
 });
 
 // Create an event listener for messages
-client.on('message', message => {
+client.on('messageCreate', message => {
 
 	//console.log(message);
 	CmdManager.dispatch(message)
