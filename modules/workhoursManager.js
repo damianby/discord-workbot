@@ -471,7 +471,7 @@ class WorkhoursManager {
 			.setTitle('Twój raport godzinowy')
 			.setDescription('Wygenerowany link jest jednorazowy, dostępny tylko dla Ciebie i zostanie dezaktywowany po 10 minutach!')
 			.setURL(link)
-			.setFooter('Ta wiadomość zniknie za jakiś czas, jeśli Ci przeszkadza kliknij \'Odrzuć tę wiadomość\'');
+			.setFooter({text: 'Ta wiadomość zniknie za jakiś czas, jeśli Ci przeszkadza kliknij \'Odrzuć tę wiadomość\''});
 
 
 		await interaction.followUp({ embeds: [linkEmbed], ephemeral: true })
