@@ -55,21 +55,23 @@ async function getRandomFact() {
 }
 
 function readFiles(dirname, onFileContent, onError) {
-	fs.readdir(dirname, function(err, filenames) {
-		if (err) {
-			onError(err);
-			return;
-		}
-		filenames.forEach(function(filename) {
-			fs.readFile(path.join(dirname, filename), 'utf-8', function(err, content) {
-				if (err) {
-					onError(err);
-					return;
-				}
-				onFileContent(filename, path.join(dirname, filename), content);
+	if(fs.existsSync(dirname)) {
+		fs.readdir(dirname, function(err, filenames) {
+			if (err) {
+				onError(err);
+				return;
+			}
+			filenames.forEach(function(filename) {
+				fs.readFile(path.join(dirname, filename), 'utf-8', function(err, content) {
+					if (err) {
+						onError(err);
+						return;
+					}
+					onFileContent(filename, path.join(dirname, filename), content);
+				});
 			});
 		});
-	});
+	}
 }
 
 module.exports = {

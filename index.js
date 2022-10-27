@@ -50,7 +50,7 @@ app.use(express.static(path.join(__basedir, 'Public')));
 
 
 
-const tournament = require('./modules/tournament');
+//const tournament = require('./modules/tournament');
 
 
 manager.initialize();

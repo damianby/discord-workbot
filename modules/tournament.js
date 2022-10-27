@@ -37,34 +37,34 @@ class Tournament {
 
 }
 
-// create a tournament
-client.tournaments.create({
-  tournament: {
-    name: 'new_tournament_name',
-    url: 'v598uij6',
-    tournamentType: 'single elimination',
-  },
-  callback: (err, data) => {
-    console.log(err, data);
-  }
-});
+// // create a tournament
+// client.tournaments.create({
+//   tournament: {
+//     name: 'new_tournament_name',
+//     url: 'v598uij6',
+//     tournamentType: 'single elimination',
+//   },
+//   callback: (err, data) => {
+//     console.log(err, data);
+//   }
+// });
 
-client.participants.create({
-    id: 'v598uij6',
-    participant: {
-      name: 'Andrzejoson'
-    },
-    callback: (err, data) => {
-      //console.log(err, data);
-    }
-});
+// client.participants.create({
+//     id: 'v598uij6',
+//     participant: {
+//       name: 'Andrzejoson'
+//     },
+//     callback: (err, data) => {
+//       //console.log(err, data);
+//     }
+// });
 
-client.participants.create({
-id: 'v598uij6',
-participant: {
-    name: 'Patrykson'
-},
-callback: (err, data) => {
-    //console.log(err, data);
-}
-});
+// client.participants.create({
+// id: 'v598uij6',
+// participant: {
+//     name: 'Patrykson'
+// },
+// callback: (err, data) => {
+//     //console.log(err, data);
+// }
+// });
