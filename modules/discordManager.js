@@ -457,19 +457,15 @@ async function fetchUsers(guild) {
 
 	log.verbose('Fetching all users from guild ' + guild.name);
 
-	let channels = guild.channels.cache;
-	
-	for(const [snowflake, channel] of channels) {
-		for (const [snowflake, member] of channel.members) {
-			//Skip bot
-			if(member.user.id == client.user.id) {
-				continue;
-			}
+	const members = await guild.members.fetch();
 
-			await createUser(member);
+	for(const [snowflake, member] of members) {
+		if(member.user.id == client.user.id) {
+			continue;
 		}
-	}
 
+		await createUser(member);
+	}
 	log.verbose('Finished fetching users');
 }
 
