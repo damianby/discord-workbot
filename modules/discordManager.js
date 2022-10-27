@@ -471,13 +471,13 @@ async function fetchUsers(guild) {
 
 async function createWorkhoursManagers() {
 
-	let cachedGuilds = client.guilds.cache;
+	let cachedGuilds = await client.guilds.fetch();
 	const guilds = await db.guilds().find().toArray();
 
 	for(const guild of guilds) {
 		if(guild?.workhours?.isActive) {
 
-			let cachedGuild = cachedGuilds.find(g => g.id == guild.id);
+			let cachedGuild = await cachedGuilds.find(g => g.id == guild.id).fetch();
 
 			await WorkhoursManager.create(client, cachedGuild, guild.workhours.settings);
 		}
