@@ -63,7 +63,7 @@ function getLogger(label) {
 				// - Write all logs error (and below) to `error.log`.
 				//
 				new winston.transports.Console({
-					level: 'info',
+					level: 'verbose',
 				}),
 				new winston.transports.File({ 
 					filename: path.join(logDir, '/error.log'),

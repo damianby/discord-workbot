@@ -264,7 +264,7 @@ class WorkhoursManager {
 			]);
 
 
-		let content = '**-- Przedszkolna lista obecności --**';
+		let content = '**-- Lista użytkowników --**';
 
 		const embed = new Discord.MessageEmbed()
 			.setColor('#0099ff')
