@@ -19,7 +19,7 @@ const manager = require('./manager');
 const Discord = require('discord.js');
 
 // Create an instance of a Discord client
-const client = new Discord.Client({ intents: Discord.Intents.ALL });//, partials: ['MESSAGE', 'CHANNEL', 'REACTION']  });
+const client = new Discord.Client({ intents: [Discord.Intents.FLAGS.GUILDS, Discord.Intents.FLAGS.GUILD_MESSAGES, Discord.Intents.FLAGS.GUILD_MEMBERS] });//, partials: ['MESSAGE', 'CHANNEL', 'REACTION']  });
 
 let bIsReady = false;
 
