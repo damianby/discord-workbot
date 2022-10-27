@@ -135,14 +135,14 @@ class WorkhoursManager {
 				});
 		}
 
-		// let messages = await this.workChannel.messages.fetch({ limit: 100 });
+		let messages = await this.workChannel.messages.fetch({ limit: 100 });
 
-		// for(const [snowflake, message] of messages) {
-		// 	await message.delete()
-		// 		.catch( (e) => {
-		// 			this.log.error(`Error deleting message ${e}`);
-		// 		});
-		// }
+		for(const [snowflake, message] of messages) {
+			await message.delete()
+				.catch( (e) => {
+					this.log.error(`Error deleting message ${e}`);
+				});
+		}
 
 		this.log.verbose('Finished clearing \'' + this.workChannel.name + '\'');
 	}

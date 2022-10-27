@@ -479,6 +479,10 @@ async function createWorkhoursManagers() {
 
 			let cachedGuild = await cachedGuilds.find(g => g.id == guild.id);
 
+			if(!cachedGuild) {
+				continue;
+			}
+
 			const fetchedGuild = await cachedGuild.fetch();
 
 			await WorkhoursManager.create(client, fetchedGuild, guild.workhours.settings);
@@ -519,7 +523,7 @@ async function refresh() {
 
 	await createWorkhoursManagers();
 
-	await createPerforceManagers();
+	//await createPerforceManagers();
 
 
 	// Make superuser!
