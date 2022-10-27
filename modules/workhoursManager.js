@@ -353,7 +353,7 @@ class WorkhoursManager {
 				this.log.error(error);
 			});
 
-		this.client.setTimeout(() => sentMessage.delete(), 60000);
+		setTimeout(() => sentMessage.delete(), 60000);
 	}
 
 	async #createCollector() {
