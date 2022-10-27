@@ -12,7 +12,7 @@
     "bufferutil": "^4.0.3",
     "challonge": "^2.2.0",
     "discord-command-parser": "^1.5.3",
-    "discord.js": "github:discordjs/discord.js",
+    "discord.js": "^13.0.0",
     "ejs": "^3.1.6",
     "eslint": "^7.27.0",
     "express": "^4.17.1",
