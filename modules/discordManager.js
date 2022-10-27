@@ -477,9 +477,11 @@ async function createWorkhoursManagers() {
 	for(const guild of guilds) {
 		if(guild?.workhours?.isActive) {
 
-			let cachedGuild = await cachedGuilds.find(g => g.id == guild.id).fetch();
+			let cachedGuild = await cachedGuilds.find(g => g.id == guild.id);
 
-			await WorkhoursManager.create(client, cachedGuild, guild.workhours.settings);
+			const fetchedGuild = await cachedGuild.fetch();
+
+			await WorkhoursManager.create(client, fetchedGuild, guild.workhours.settings);
 		}
 	}
 
