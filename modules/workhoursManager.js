@@ -119,13 +119,31 @@ class WorkhoursManager {
 	async #wipe() {
 		this.log.verbose('Clearing \'' + this.workChannel.name + '\' channel');
 		var msg_size = 100;
+
 		while (msg_size == 100) {
-			await this.workChannel.bulkDelete(100)
-				.then(messages => msg_size = messages.size)
+			await this.workChannel.bulkDelete(100, true)
+				.then(messages => {
+					msg_size = messages.size;
+				})
 				.catch( (error) => {
-					this.log.error(JSON.stringify(error));
+					
+					if(error.code == 50034) {
+						this.log.error('Message older than 14 days, removing');
+					} else {
+						this.log.error(JSON.stringify(error));
+					}
 				});
 		}
+
+		// let messages = await this.workChannel.messages.fetch({ limit: 100 });
+
+		// for(const [snowflake, message] of messages) {
+		// 	await message.delete()
+		// 		.catch( (e) => {
+		// 			this.log.error(`Error deleting message ${e}`);
+		// 		});
+		// }
+
 		this.log.verbose('Finished clearing \'' + this.workChannel.name + '\'');
 	}
 
