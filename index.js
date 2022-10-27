@@ -68,7 +68,7 @@ db.connect("workbot").then( () => {
         log.verbose('Server started on ip ' + config.host.addr + ':' + config.host.port);
 
 
-        //discordManager.login();
+        discordManager.login();
 
     });
 }).catch( (e) => {
