@@ -513,23 +513,23 @@ class WorkhoursManager {
 
 			this.updateHoursTable(lastUserEvent);
 
-			let fact = await factsManager.getRandomFact();
+			// let fact = await factsManager.getRandomFact();
 
-			if(fact != null) {
+			// if(fact != null) {
 
-				const factEmbed = new Discord.MessageEmbed()
-					.setColor('#0099ff')
-					.addField('Twój bezużyteczny fakt na dzisiaj', fact, true)
-					.setFooter('Ta wiadomość zniknie za jakiś czas, jeśli Ci przeszkadza kliknij \'Odrzuć tę wiadomość\'');
+			// 	const factEmbed = new Discord.MessageEmbed()
+			// 		.setColor('#0099ff')
+			// 		.addField('Twój bezużyteczny fakt na dzisiaj', fact, true)
+			// 		.setFooter('Ta wiadomość zniknie za jakiś czas, jeśli Ci przeszkadza kliknij \'Odrzuć tę wiadomość\'');
 
-					//.setTitle('Twój losowy fakt na dzisiaj')
-					//.setDescription(fact);
+			// 		//.setTitle('Twój losowy fakt na dzisiaj')
+			// 		//.setDescription(fact);
 
-				interaction.followUp({ embeds: [factEmbed], ephemeral: true })
-				.catch( (error) => {
-					this.log.error(error);
-				});
-			}
+			// 	interaction.followUp({ embeds: [factEmbed], ephemeral: true })
+			// 	.catch( (error) => {
+			// 		this.log.error(error);
+			// 	});
+			// }
 		} else {
 
 			const errorEmbed = new Discord.MessageEmbed()
