@@ -19,7 +19,7 @@ const manager = require('./manager');
 const Discord = require('discord.js');
 
 // Create an instance of a Discord client
-const client = new Discord.Client({ intents: [Discord.Intents.FLAGS.GUILDS, Discord.Intents.FLAGS.GUILD_MESSAGES, Discord.Intents.FLAGS.GUILD_MEMBERS] });//, partials: ['MESSAGE', 'CHANNEL', 'REACTION']  });
+const client = new Discord.Client({ intents: [Discord.Intents.FLAGS.GUILDS, Discord.Intents.FLAGS.GUILD_MESSAGES, Discord.Intents.FLAGS.GUILD_MEMBERS, Discord.Intents.FLAGS.DIRECT_MESSAGES], partials: ['MESSAGE', 'CHANNEL'] });//, partials: ['MESSAGE', 'CHANNEL', 'REACTION']  });
 
 let bIsReady = false;
 
@@ -91,6 +91,13 @@ class CommandsManager {
 				desc: 'Generuje odnośnik do raportu godzinowego',
 				params: [],
 				privileges: [GROUP.EMPLOYEE]
+			},
+			raportuser: {
+				name: 'raportuser',
+				func: reportsUserMessage,
+				desc: 'Generuje odnośnik do raportu godzinowego dla użytkownika',
+				params: [{ name: 'userId', required: true }],
+				privileges: [GROUP.ADMIN]
 			},
 			track: {
 				name: 'track',
@@ -365,6 +372,71 @@ async function reportsMessage(parsed, message) {
 
 	//console.log(JSON.stringify(hours, null, '\t'));
 } 
+
+async function reportsUserMessage(parsed, message) {
+
+	let user = getUserFromMention(parsed.arguments[0]).trim();
+
+	//console.log('User: ' + user);
+	//check if this works
+	if(!user) {
+		return;
+	}
+	
+	let isnum = /^\d+$/.test(user);
+	//let isnum = /^\d+$/.test(parsed.arguments[0]);
+	if(!isnum) {
+		message.author.send({ content: 'Id nie jest liczbą!'});
+		return;
+	}
+
+
+	let hours = await db.hours().aggregate([
+		{ $match: { userId: user } },
+		{ $lookup: { 
+			from: 'guilds',
+			let: { localGuildId: '$guildId' },
+			pipeline: [
+					{ $match: { 
+						$expr: {
+							$eq: ['$id', '$$localGuildId']
+						},
+					} 
+				},
+				{ $project: { name: '$name', _id: 0 } },
+				{ $replaceRoot: { newRoot: '$$ROOT' } }
+			 ],
+			as: 'guild'
+		}},
+		{ $project: {
+			guild: {$arrayElemAt: [ '$guild', 0 ] },
+			year: {$year: {date:'$firstDay',timezone:'Europe/Warsaw'}},
+			month: {$month: {date:'$firstDay',timezone:'Europe/Warsaw'}},
+			schedules: {
+				$map: {
+					input: '$schedules',
+					as: 'schedule',
+					in: {
+						duration: {$divide: [{$subtract: ['$$schedule.dateEnd', '$$schedule.dateStart']}, 1000]},
+						day:{$dayOfMonth:{date:'$$schedule.dateStart',timezone:'Europe/Warsaw'}},
+						dayEnd: {$dayOfMonth:{date:'$$schedule.dateEnd',timezone:'Europe/Warsaw'}},
+						hour:{$hour:{date:'$$schedule.dateStart',timezone:'Europe/Warsaw'}},
+						hourEnd:{$hour:{date:'$$schedule.dateEnd',timezone:'Europe/Warsaw'}},
+						minute:{$minute:{date:'$$schedule.dateStart',timezone:'Europe/Warsaw'}},
+						minuteEnd:{$minute:{date:'$$schedule.dateEnd',timezone:'Europe/Warsaw'}},
+					}
+				}  
+			},
+		}},
+		{ $sort: { 'schedules.dateStart': 1}}
+	]).toArray();
+
+	let link = manager.generateOneTimeReport(hours);
+
+	message.author.send(link);
+
+	//console.log(JSON.stringify(hours, null, '\t'));
+}
 
 async function commandsMessage(parsed, message) {
 	const query = { 
