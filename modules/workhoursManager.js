@@ -462,7 +462,7 @@ class WorkhoursManager {
 		
 		let link = manager.generateOneTimeReport(hours);
 
-		console.log(hours);
+		//console.log(hours);
 	
 		const linkEmbed = new Discord.EmbedBuilder()
 			.setColor(0x00ff00)
