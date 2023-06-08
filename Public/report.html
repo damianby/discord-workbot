@@ -19,7 +19,7 @@
 <% reports.forEach(function(report){ %>
 	<% let reparsed = helpers.reparseDaysAndDurations(report); %>
     <div>Serwer: <%= report.guild.name %></div>
-    <div>Miesiąc <%= report.month %> - <%= helpers.formatToMonthHours(reparsed.totalMonthDuration) %></div>
+    <div>Rok - <%= report.year %> Miesiąc <%= report.month %> - <%= helpers.formatToMonthHours(reparsed.totalMonthDuration) %></div>
        	<% reparsed.schedules.forEach(function(day){ %>
             <li>Dzień <%= day.dayStart %> - <%= helpers.secondsToTime(day.totalDuration) %></li>
             <% day.schedules.forEach(function(schedule){   %>

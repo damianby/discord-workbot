@@ -19,7 +19,13 @@ const manager = require('./manager');
 const Discord = require('discord.js');
 
 // Create an instance of a Discord client
-const client = new Discord.Client({ intents: [Discord.Intents.FLAGS.GUILDS, Discord.Intents.FLAGS.GUILD_MESSAGES, Discord.Intents.FLAGS.GUILD_MEMBERS, Discord.Intents.FLAGS.DIRECT_MESSAGES], partials: ['MESSAGE', 'CHANNEL'] });//, partials: ['MESSAGE', 'CHANNEL', 'REACTION']  });
+const client = new Discord.Client({ 
+	intents: [
+		Discord.GatewayIntentBits.Guilds, 
+		Discord.GatewayIntentBits.GuildMessages, 
+		Discord.GatewayIntentBits.GuildMembers, 
+		Discord.GatewayIntentBits.DirectMessages], 
+		partials: [Discord.Partials.Message, Discord.Partials.Channel] });//, partials: ['MESSAGE', 'CHANNEL', 'REACTION']  });
 
 let bIsReady = false;
 
@@ -85,15 +91,15 @@ class CommandsManager {
 				params: [],
 				privileges: [GROUP.EMPLOYEE]
 			},
-			raport: {
-				name: 'raport',
+			report: {
+				name: 'report',
 				func: reportsMessage,
 				desc: 'Generuje odnośnik do raportu godzinowego',
 				params: [],
 				privileges: [GROUP.EMPLOYEE]
 			},
-			raportuser: {
-				name: 'raportuser',
+			reportuser: {
+				name: 'reportuser',
 				func: reportsUserMessage,
 				desc: 'Generuje odnośnik do raportu godzinowego dla użytkownika',
 				params: [{ name: 'userId', required: true }],
@@ -263,16 +269,16 @@ async function allMessage(parsed, message) {
 		.setColor('#00ff00')
 		.setDescription(parsed.body);
 
-	const buttons = new Discord.MessageActionRow()
+	const buttons = new Discord.ActionRowBuilder()
 		.addComponents([
-		new Discord.MessageButton()
+		new Discord.ButtonBuilder()
 			.setCustomID('all_message_approve_button')
 			.setLabel('Approve')
-			.setStyle('SUCCESS'),
-		new Discord.MessageButton()
+			.setStyle(ButtonStyle.Primary),
+		new Discord.ButtonBuilder()
 			.setCustomID('all_message_dismiss_button')
 			.setLabel('Dismiss')
-			.setStyle('DANGER')
+			.setStyle(ButtonStyle.Danger)
 		
 		]);
 
@@ -390,7 +396,8 @@ async function reportsUserMessage(parsed, message) {
 		return;
 	}
 
-
+	//const now = new Date();
+	//const thisYearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
 	let hours = await db.hours().aggregate([
 		{ $match: { userId: user } },
 		{ $lookup: { 
@@ -428,7 +435,7 @@ async function reportsUserMessage(parsed, message) {
 				}  
 			},
 		}},
-		{ $sort: { 'schedules.dateStart': 1}}
+		{ $sort: { 'year': -1, 'month': -1}}
 	]).toArray();
 
 	let link = manager.generateOneTimeReport(hours);
@@ -572,6 +579,7 @@ async function createWorkhoursManagers() {
 }
 
 const PerforceManager = require('./perforceManager');
+const { ButtonStyle } = require('discord.js');
 
 async function createPerforceManagers() {
 	let cachedGuilds = client.guilds.cache;

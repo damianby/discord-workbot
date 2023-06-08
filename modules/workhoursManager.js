@@ -7,17 +7,17 @@ const moment = require('moment-timezone');
 const factsManager = require('./facts');
 
 const manager = require('./manager');
+const { ButtonStyle } = require('discord.js');
 
 const WORK_CHANNEL_NAME = 'workhours';
 
 const WORK_CHANNEL_PERMISSION_FLAGS = [
-	'VIEW_CHANNEL',
-	'EMBED_LINKS',
-	'READ_MESSAGE_HISTORY',
+	Discord.PermissionsBitField.Flags.ViewChannel,
+	Discord.PermissionsBitField.Flags.EmbedLinks,
+	Discord.PermissionsBitField.Flags.ReadMessageHistory,
 ];
 
-const permissions = new Discord.Permissions(WORK_CHANNEL_PERMISSION_FLAGS);
-
+const permissions = new Discord.PermissionsBitField(WORK_CHANNEL_PERMISSION_FLAGS);
 
 class WorkhoursManager {
 
@@ -85,7 +85,7 @@ class WorkhoursManager {
 		this.log.verbose('Looking for set workhours channel');
 
 		const channels = this.guild.channels.cache;
-		const foundChannel = channels.find(channel => channel.id === id && channel.isText());
+		const foundChannel = channels.find(channel => channel.id === id && channel.isTextBased());
 
 		if(foundChannel) {
 			this.log.verbose('Work channel \'' + foundChannel.name + '\' found');
@@ -99,7 +99,7 @@ class WorkhoursManager {
 	
 		const channels = this.guild.channels.cache;
 
-		const foundChannel = channels.find(channel => channel.name === name && channel.isText());
+		const foundChannel = channels.find(channel => channel.name === name && channel.isTextBased());
 
 		if(foundChannel) {
 			this.log.verbose('Work channel \'' + name + '\' found');
@@ -247,27 +247,27 @@ class WorkhoursManager {
 
 		hoursMsg += '\n```';
 
-		const buttons = new Discord.MessageActionRow()
+		const buttons = new Discord.ActionRowBuilder()
 			.addComponents([
-			new Discord.MessageButton()
+			new Discord.ButtonBuilder()
 				.setCustomId('workhours_login_button')
 				.setLabel('Login')
-				.setStyle('SUCCESS'),
-			new Discord.MessageButton()
+				.setStyle(ButtonStyle.Success),
+			new Discord.ButtonBuilder()
 				.setCustomId('workhours_logout_button')
 				.setLabel('Logout')
-				.setStyle('DANGER'),
-			new Discord.MessageButton()
+				.setStyle(ButtonStyle.Danger),
+			new Discord.ButtonBuilder()
 				.setCustomId('workhours_report_button')
 				.setLabel('Report')
-				.setStyle('PRIMARY')
+				.setStyle(ButtonStyle.Primary)
 			]);
 
 
 		let content = '**-- Lista użytkowników --**';
 
-		const embed = new Discord.MessageEmbed()
-			.setColor('#0099ff')
+		const embed = new Discord.EmbedBuilder()
+			.setColor(0x0099ff)
 			//.setTitle('Timetable')
 			.setDescription(hoursMsg);
 
@@ -322,7 +322,7 @@ class WorkhoursManager {
 
 		let messageToSend = '';
 
-		let messageTitle = '';
+		let messageTitle = '\u200b';
 		if(messages.waiting.length > 1) {
 			messageToSend = '**' + messages.waiting.length + ' użytkowników zmieniło status:**';
 		}
@@ -330,12 +330,6 @@ class WorkhoursManager {
 			messageToSend += '\n> ' + messages.waiting[i];
 		}
 		messages.waiting = [];
-
-		
-		const usersChangeEmbed = new Discord.MessageEmbed()
-		.setColor(Discord.Util.resolveColor('GREEN'))
-		.setTitle(messageTitle)
-		.setDescription(messageToSend);
 
 		// console.log('Before followup');
 		// let sentMessage = await followUp(messageToSend)
@@ -388,8 +382,8 @@ class WorkhoursManager {
 			if(user) {
 				if(user.groups.includes('notrack')) {
 
-					const errorEmbed = new Discord.MessageEmbed()
-						.setColor('#ff0000')
+					const errorEmbed = new Discord.EmbedBuilder()
+						.setColor(0xff0000)
 						.setTitle('Nie możesz korzystać z tej funkcjonalności');
 
 					interaction.reply({embeds: [errorEmbed], ephemeral: true});
@@ -424,8 +418,10 @@ class WorkhoursManager {
 
 		await interaction.deferUpdate();
 
+		const now = new Date();
+		const thisYearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
 		let hours = await db.hours().aggregate([
-			{ $match: { userId: interaction.user.id } },
+			{ $match: { userId: interaction.user.id, firstDay: { $gte: thisYearStart} } },
 			{ $lookup: { 
 				from: 'guilds',
 				let: { localGuildId: '$guildId' },
@@ -438,7 +434,7 @@ class WorkhoursManager {
 					},
 					{ $project: { name: '$name', _id: 0 } },
 					{ $replaceRoot: { newRoot: '$$ROOT' } }
-				 ],
+				],
 				as: 'guild'
 			}},
 			{ $project: {
@@ -461,13 +457,15 @@ class WorkhoursManager {
 					}  
 				},
 			}},
-			{ $sort: { 'schedules.dateStart': 1}}
+			{ $sort: { 'year': -1, 'month': -1}}
 		]).toArray();
-	
+		
 		let link = manager.generateOneTimeReport(hours);
+
+		console.log(hours);
 	
-		const linkEmbed = new Discord.MessageEmbed()
-			.setColor('#00ff00')
+		const linkEmbed = new Discord.EmbedBuilder()
+			.setColor(0x00ff00)
 			.setTitle('Twój raport godzinowy')
 			.setDescription('Wygenerowany link jest jednorazowy, dostępny tylko dla Ciebie i zostanie dezaktywowany po 10 minutach!')
 			.setURL(link)
@@ -535,8 +533,8 @@ class WorkhoursManager {
 
 			// if(fact != null) {
 
-			// 	const factEmbed = new Discord.MessageEmbed()
-			// 		.setColor('#0099ff')
+			// 	const factEmbed = new Discord.EmbedBuilder()
+			// 		.setColor(0x0099ff)
 			// 		.addField('Twój bezużyteczny fakt na dzisiaj', fact, true)
 			// 		.setFooter('Ta wiadomość zniknie za jakiś czas, jeśli Ci przeszkadza kliknij \'Odrzuć tę wiadomość\'');
 
@@ -550,8 +548,8 @@ class WorkhoursManager {
 			// }
 		} else {
 
-			const errorEmbed = new Discord.MessageEmbed()
-			.setColor('#ff0000')
+			const errorEmbed = new Discord.EmbedBuilder()
+			.setColor(0xff0000)
 			.setTitle('Jesteś już zalogowany/a!');
 
 			await interaction.followUp({ embeds: [errorEmbed], ephemeral: true })
@@ -657,8 +655,8 @@ class WorkhoursManager {
 			const success = await this.workhoursOut(authorId, guildId, interaction);
 			if(!success) {
 
-				const errorEmbed = new Discord.MessageEmbed()
-				.setColor('#ff0000')
+				const errorEmbed = new Discord.EmbedBuilder()
+				.setColor(0xff0000)
 				.setTitle('Nie jesteś obecnie zalogowany/a do pracy!');
 
 				interaction.followUp({ embeds: [errorEmbed], ephemeral : true });
