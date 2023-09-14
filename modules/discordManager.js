@@ -225,7 +225,7 @@ const CmdManager = new CommandsManager();
 
 
 exports.login = async function() {
-	client.login( config.discord.token )
+	client.login( process.env.DISCORD_TOKEN )
 		.then( (token) => {
 			log.info('Logged in succesfully as bot!');
 		}).catch( (e) => {

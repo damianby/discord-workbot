@@ -1,10 +1,8 @@
 const log = require('./log')("db");
 
-const config = require('../config');
-
 const { MongoClient } = require("mongodb");
 // Connection URI
-const uri = config.mongo.uri;
+const uri = process.env.MONGODB_URI;
 
 // Create a new MongoClient
 const client = new MongoClient(uri, {
@@ -27,9 +25,9 @@ async function connect() {
 		log.verbose("Connected to server");
 		// Establish and verify connection
 		
-		await client.db(config.mongo.db).command({ ping: 1 });
+		await client.db(process.env.MONGODB_DB).command({ ping: 1 });
 
-		database = client.db(config.mongo.db);
+		database = client.db(process.env.MONGODB_DB);
 		usersColl = await database.collection("users");
 		guildsColl = await database.collection("guilds");
 		hoursColl = await database.collection("hours");

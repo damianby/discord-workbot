@@ -4,7 +4,7 @@ global.__basedir = __dirname;
 console.log(global.__basedir);
 const log = require('./modules/log')("app");
 
-const config = require('./config');
+require('dotenv').config();
 
 const express = require('express');
 const app = express();
@@ -64,9 +64,8 @@ db.connect("workbot").then( () => {
   
 	require('./modules/facts').rescan();
 
-	server.listen(config.host.port, config.host.addr, function(){
-        log.verbose('Server started on ip ' + config.host.addr + ':' + config.host.port);
-
+	server.listen(process.env.HOST_PORT, process.env.HOST_ADDRESS, function(){
+        log.verbose('Server started on ip ' + process.env.HOST_ADDRESS + ':' + process.env.HOST_PORT);
 
         discordManager.login();
 

@@ -5,8 +5,6 @@ const log = require('./log')('manager');
 
 const crypto = require('crypto');
 
-const config = require('../config');
-
 const reports = new Map();
 
 setInterval(function() {
@@ -43,5 +41,5 @@ exports.generateOneTimeReport = function(reportData) {
 		date: new Date(),
 	});
 
-	return 'http://' + config.web.addr + '/report/' + id;
+	return 'http://' + process.env.WEB_ADDRESS + '/report/' + id;
 }
